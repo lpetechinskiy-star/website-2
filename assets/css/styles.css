@@ -347,8 +347,8 @@ p { text-wrap: pretty }
     linear-gradient(to bottom,
       rgba(12,10,9,.80) 0%,
       rgba(12,10,9,.32) 20%,
-      rgba(12,10,9,.60) 40%,
-      rgba(12,10,9,.90) 58%,
+      rgba(12,10,9,.72) 40%,
+      rgba(12,10,9,.93) 56%,
       rgba(12,10,9,.97) 76%,
       var(--ink) 100%);
 }
@@ -357,6 +357,19 @@ p { text-wrap: pretty }
   padding-inline: var(--gutter);
   display: grid; gap: clamp(var(--s3), 1.6svh, var(--s5));
 }
+/* Китикер — единственная строка, которая попадает на светлый срез мяса
+   во втором акте ролика. Затемнять ради неё весь кадр расточительно,
+   поэтому у неё своя подложка: замерено 2.06:1 без неё. */
+.hero .kicker {
+  justify-self: start;
+  padding: var(--s2) var(--s4);
+  /* сплошная заливка, а не backdrop-filter: на него нельзя опираться ради
+     контраста — поддержка неровная, и поверх слоя с отрицательным z-index
+     он композитится неверно */
+  background: rgba(12, 10, 9, .88);
+  border: 1px solid rgba(212, 160, 60, .26);
+}
+
 .hero__h {
   font-family: var(--f-disp);
   font-size: var(--t-hero); font-weight: 700;
@@ -427,10 +440,19 @@ p { text-wrap: pretty }
 
 /* на низких экранах (iPhone SE и подобные) первый экран поджимается,
    чтобы строка с цифрами не уезжала за фолд */
-@media (max-height: 43em) {
+@media (max-height: 46em) {
   .hero { padding-block: calc(var(--hdr-h) + var(--s4)) var(--s5) }
   .hero__stats { margin-top: 0; padding-top: var(--s3) }
   .hero__lead { font-size: 1rem }
+  .hero .kicker { padding: var(--s1) var(--s3) }
+  .hero__cta .btn { min-height: 2.75rem }
+}
+
+/* совсем низкие экраны (iPhone SE в альбомной вёрстке и подобные) */
+@media (max-height: 42em) {
+  .hero__in { gap: var(--s2) }
+  .hero__stats { padding-top: var(--s2) }
+  .hero__h { margin-block: var(--s1) var(--s2) }
 }
 
 /* ── 8. TICKER ──────────────────────────────────────────────────────────── */
@@ -1274,7 +1296,7 @@ p { text-wrap: pretty }
   .hero__veil {
     background:
       radial-gradient(110% 70% at 50% 100%, rgba(224, 85, 43, .16), transparent 62%),
-      linear-gradient(to right, rgba(12,10,9,.95) 0%, rgba(12,10,9,.86) 32%, rgba(12,10,9,.32) 66%, rgba(12,10,9,.56) 100%),
+      linear-gradient(to right, rgba(12,10,9,.92) 0%, rgba(12,10,9,.80) 32%, rgba(12,10,9,.24) 66%, rgba(12,10,9,.50) 100%),
       linear-gradient(to bottom, rgba(12,10,9,.82) 0%, rgba(12,10,9,.44) 30%, rgba(12,10,9,.72) 74%, var(--ink) 100%);
   }
   .nav { display: flex }

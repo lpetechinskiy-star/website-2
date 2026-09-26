@@ -266,8 +266,8 @@
     const TODAY    = msk.iso;
     const HORIZON  = addDays(TODAY, 60);
     const FIRST_SLOT = 12;
-    // будни до 22:00, выходные (сб, вс) до 23:00
-    const LAST_SLOT  = [23, 22, 22, 22, 22, 22, 23];       // вс, пн…сб
+    // пн–чт до 22:00, пт–вс до 23:00 — совпадает с часами работы
+    const LAST_SLOT  = [23, 22, 22, 22, 22, 23, 23];       // вс, пн…сб
     const LEAD_MIN   = 60;                                  // бронь минимум за час
     const MAX_SLOT   = Math.max(...LAST_SLOT);
 
@@ -823,7 +823,7 @@
   const nowChip = $('#open-now'), nowText = $('#open-now-t');
   if (nowChip && nowText) {
     const OPEN = 12 * 60;                                   // открываемся в 12:00
-    const CLOSE = [24 * 60, 24 * 60, 24 * 60, 24 * 60, 24 * 60, 26 * 60, 26 * 60]; // вс…сб
+    const CLOSE = [23 * 60, 22 * 60, 22 * 60, 22 * 60, 22 * 60, 23 * 60, 23 * 60]; // вс…сб
     const hhmm = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 
     const paint = () => {

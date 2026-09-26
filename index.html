@@ -46,8 +46,8 @@
   },
   "geo": { "@type": "GeoCoordinates", "latitude": 55.766, "longitude": 37.595 },
   "openingHoursSpecification": [
-    { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Sunday","Monday","Tuesday","Wednesday","Thursday"], "opens": "12:00", "closes": "00:00" },
-    { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Friday","Saturday"], "opens": "12:00", "closes": "02:00" }
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday"], "opens": "12:00", "closes": "22:00" },
+    { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Friday","Saturday","Sunday"], "opens": "12:00", "closes": "23:00" }
   ],
   "acceptsReservations": true
 }
@@ -540,8 +540,8 @@
         <dd>
           <p class="info__now" id="open-now" hidden><span class="info__dot" aria-hidden="true"></span><span id="open-now-t"></span></p>
           <ul class="hours">
-            <li><b>Вс–Чт</b><span class="tnum">12:00 — 00:00</span></li>
-            <li><b>Пт–Сб</b><span class="tnum">12:00 — 02:00</span></li>
+            <li><b>Пн–Чт</b><span class="tnum">12:00 — 22:00</span></li>
+            <li><b>Пт–Вс</b><span class="tnum">12:00 — 23:00</span></li>
           </ul>
         </dd>
       </div>
@@ -791,7 +791,7 @@
 
     <div class="ft__col">
       <h2>Часы</h2>
-      <p class="tnum">Вс–Чт&ensp;12:00 — 00:00<br>Пт–Сб&ensp;12:00 — 02:00</p>
+      <p class="tnum">Пн–Чт&ensp;12:00 — 22:00<br>Пт–Вс&ensp;12:00 — 23:00</p>
       <a class="btn btn--ghost btn--sm" href="#reserve">Забронировать</a>
     </div>
   </div>

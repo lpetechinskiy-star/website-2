@@ -216,82 +216,444 @@
   });
   addEventListener('focusout', () => { formFocused = false; ctaBarUpdate(); });
 
-  /* ── 9. RESERVATION FORM ────────────────────────────────────────────── */
+  /* ── 9. БРОНИРОВАНИЕ ────────────────────────────────────────────────
+     Нативные date/select остаются в форме и несут значения — без JS
+     страница бронирует на них. Когда скрипт жив, они прячутся, а поверх
+     встают свой календарь, плашки времени и счётчик гостей; форма
+     переезжает в модальное окно, которое открывает любая кнопка
+     «Забронировать». */
+
+  /* московское время: гость может сидеть в любом часовом поясе */
+  const MSK_DAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  function moscowNow() {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Moscow', weekday: 'short',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(new Date());
+    const g = t => parts.find(x => x.type === t).value;
+    return {
+      day: MSK_DAYS[g('weekday')],
+      min: (+g('hour') % 24) * 60 + +g('minute'),
+      iso: `${g('year')}-${g('month')}-${g('day')}`
+    };
+  }
+
   const form = $('#res-form');
   if (form) {
-    const submit  = $('#res-submit');
-    const summary = $('#form-err');
-    const sumList = $('#form-err-list');
-    const live    = $('#form-live');
-    const done    = $('#res-done');
-    const dateIn  = $('#f-date');
+    // novalidate ставим из скрипта: без JS проверять форму должен браузер,
+    // иначе не проверит никто
+    form.noValidate = true;
 
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const horizon = new Date(today); horizon.setDate(horizon.getDate() + 60);
-    const iso = d => d.toISOString().slice(0, 10);
-    dateIn.min = iso(today);
-    dateIn.max = iso(horizon);
-    if (!dateIn.value) dateIn.value = iso(today);
+    const submitBtn = $('#res-submit');
+    const summary   = $('#form-err');
+    const sumList   = $('#form-err-list');
+    const live      = $('#form-live');
+    const done      = $('#res-done');
+    const dateIn    = $('#f-date');
+    const timeIn    = $('#f-time');
+    const guestsIn  = $('#f-guests');
+    const zoneIn    = $('#f-zone');
 
-    const digits = s => (s.match(/\d/g) || []).length;
+    /* ---- даты как строки YYYY-MM-DD; полдень UTC, чтобы не ловить DST -- */
+    const toDate = iso => new Date(iso + 'T12:00:00Z');
+    const toISO  = d => d.toISOString().slice(0, 10);
+    const addDays = (iso, n) => { const d = toDate(iso); d.setUTCDate(d.getUTCDate() + n); return toISO(d); };
+    const dow = iso => toDate(iso).getUTCDay();            // 0 = воскресенье
+    const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
 
+    const msk      = moscowNow();
+    const TODAY    = msk.iso;
+    const HORIZON  = addDays(TODAY, 60);
+    const FIRST_SLOT = 12;
+    const LAST_SLOT  = [21, 22, 22, 22, 22, 23, 23];       // вс, пн…сб
+    const LEAD_MIN   = 60;                                  // бронь минимум за час
+
+    dateIn.min = TODAY;
+    dateIn.max = HORIZON;
+    if (!dateIn.value || dateIn.value < TODAY) dateIn.value = TODAY;
+
+    const fmtLong  = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', weekday: 'long', timeZone: 'UTC' });
+    const fmtShort = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', timeZone: 'UTC' });
+    const fmtMonth = new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+    const guestWord = v => {
+      if (v === '10+') return 'больше 10 гостей';
+      const n = +v, d10 = n % 10, d100 = n % 100;
+      const w = (d10 === 1 && d100 !== 11) ? 'гость'
+              : (d10 >= 2 && d10 <= 4 && (d100 < 12 || d100 > 14)) ? 'гостя' : 'гостей';
+      return `${n} ${w}`;
+    };
+
+    /* ---- календарь ---------------------------------------------------- */
+    const cal = $('#cal'), calGrid = $('#cal-grid'), calM = $('#cal-m');
+    let viewY, viewM;
+
+    function setView(iso) {
+      const d = toDate(iso);
+      viewY = d.getUTCFullYear();
+      viewM = d.getUTCMonth();
+    }
+
+    function renderCal(focusISO) {
+      const first = new Date(Date.UTC(viewY, viewM, 1, 12));
+      const lead  = (first.getUTCDay() + 6) % 7;            // понедельник первый
+      const total = new Date(Date.UTC(viewY, viewM + 1, 0, 12)).getUTCDate();
+      // ru-RU добавляет « г.» — в заголовке календаря это лишний шум
+      calM.textContent = cap(fmtMonth.format(first).replace(/\s*г\.?$/, ''));
+
+      const cells = [];
+      for (let i = 0; i < lead; i++) {
+        const pad = document.createElement('span');
+        pad.className = 'cal__pad';
+        pad.setAttribute('aria-hidden', 'true');
+        cells.push(pad);
+      }
+      for (let n = 1; n <= total; n++) {
+        const iso = toISO(new Date(Date.UTC(viewY, viewM, n, 12)));
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cal__d';
+        btn.dataset.iso = iso;
+        btn.textContent = String(n);
+        btn.setAttribute('aria-label', cap(fmtLong.format(toDate(iso))));
+        const off = iso < TODAY || iso > HORIZON;
+        btn.disabled = off;
+        btn.setAttribute('aria-pressed', String(iso === dateIn.value));
+        if (iso === TODAY) btn.dataset.today = '';
+        btn.tabIndex = iso === dateIn.value ? 0 : -1;
+        cells.push(btn);
+      }
+      calGrid.replaceChildren(...cells);
+
+      // если выбранный день не в этом месяце — держим одну кнопку в табе
+      if (!$('.cal__d[tabindex="0"]', calGrid)) {
+        const firstOk = $('.cal__d:not(:disabled)', calGrid);
+        if (firstOk) firstOk.tabIndex = 0;
+      }
+      $('[data-cal="-1"]').disabled = toISO(new Date(Date.UTC(viewY, viewM, 1, 12))) <= TODAY;
+      $('[data-cal="1"]').disabled  = toISO(new Date(Date.UTC(viewY, viewM + 1, 1, 12))) > HORIZON;
+
+      if (focusISO) {
+        const t = $(`.cal__d[data-iso="${focusISO}"]`, calGrid);
+        if (t) { $$('.cal__d', calGrid).forEach(d => d.tabIndex = -1); t.tabIndex = 0; t.focus(); }
+      }
+      if (hasGsap && !calm()) {
+        gsap.fromTo($$('.cal__d', calGrid), { opacity: 0, y: 6 },
+          { opacity: 1, y: 0, duration: .3, ease: 'power2.out', stagger: .008, overwrite: true });
+      }
+    }
+
+    function pickDate(iso) {
+      dateIn.value = iso;
+      $$('.cal__d', calGrid).forEach(d => {
+        d.setAttribute('aria-pressed', String(d.dataset.iso === iso));
+        d.tabIndex = d.dataset.iso === iso ? 0 : -1;
+      });
+      check('f-date');
+      renderTimes();
+      paintSummary();
+    }
+
+    calGrid.addEventListener('click', e => {
+      const b = e.target.closest('.cal__d');
+      if (b && !b.disabled) pickDate(b.dataset.iso);
+    });
+
+    calGrid.addEventListener('keydown', e => {
+      const cur = e.target.closest('.cal__d');
+      if (!cur) return;
+      const STEP = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+      let next = null;
+      if (e.key in STEP) next = addDays(cur.dataset.iso, STEP[e.key]);
+      else if (e.key === 'Home') next = addDays(cur.dataset.iso, -((dow(cur.dataset.iso) + 6) % 7));
+      else if (e.key === 'End')  next = addDays(cur.dataset.iso, 6 - ((dow(cur.dataset.iso) + 6) % 7));
+      else if (e.key === 'PageUp' || e.key === 'PageDown') {
+        const d = toDate(cur.dataset.iso);
+        d.setUTCMonth(d.getUTCMonth() + (e.key === 'PageUp' ? -1 : 1));
+        next = toISO(d);
+      } else return;
+
+      e.preventDefault();
+      if (next < TODAY) next = TODAY;
+      if (next > HORIZON) next = HORIZON;
+      const d = toDate(next);
+      if (d.getUTCFullYear() !== viewY || d.getUTCMonth() !== viewM) {
+        setView(next); renderCal(next);
+      } else {
+        const t = $(`.cal__d[data-iso="${next}"]`, calGrid);
+        if (t) { $$('.cal__d', calGrid).forEach(x => x.tabIndex = -1); t.tabIndex = 0; t.focus(); }
+      }
+    });
+
+    $$('[data-cal]').forEach(b => b.addEventListener('click', () => {
+      const d = new Date(Date.UTC(viewY, viewM + (+b.dataset.cal), 1, 12));
+      viewY = d.getUTCFullYear(); viewM = d.getUTCMonth();
+      renderCal();
+    }));
+
+    /* ---- время: слоты зависят от дня недели, сегодня отсекаем прошедшие -- */
+    const timesBox = $('#times'), timeNote = $('#time-note');
+
+    function renderTimes() {
+      const iso = dateIn.value;
+      if (!iso) return;
+      const last = LAST_SLOT[dow(iso)];
+      const isToday = iso === TODAY;
+      const earliest = msk.min + LEAD_MIN;
+
+      const chips = [];
+      let free = 0;
+      for (let h = FIRST_SLOT; h <= last; h++) {
+        const label = `${String(h).padStart(2, '0')}:00`;
+        const off = isToday && h * 60 < earliest;
+        if (!off) free++;
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chip';
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', String(label === timeIn.value));
+        b.disabled = off;
+        b.dataset.time = label;
+        b.textContent = label;
+        if (off) b.setAttribute('aria-label', `${label} — время уже прошло`);
+        chips.push(b);
+      }
+      timesBox.replaceChildren(...chips);
+
+      // выбранное время могло стать недоступным на новую дату
+      const active = chips.find(c => c.getAttribute('aria-checked') === 'true' && !c.disabled);
+      if (!active) {
+        timeIn.value = '';
+        chips.forEach(c => c.setAttribute('aria-checked', 'false'));
+      }
+
+      timeNote.hidden = free > 0;
+      if (!free) timeNote.textContent = 'На сегодня бронь уже закрыта — выберите другой день или позвоните нам.';
+      else if (dow(iso) === 0) { timeNote.hidden = false; timeNote.textContent = 'В воскресенье последняя посадка в 21:00.'; }
+
+      if (hasGsap && !calm()) {
+        gsap.fromTo(chips, { opacity: 0, y: 6 },
+          { opacity: 1, y: 0, duration: .28, ease: 'power2.out', stagger: .02, overwrite: true });
+      }
+    }
+
+    timesBox.addEventListener('click', e => {
+      const b = e.target.closest('.chip');
+      if (!b || b.disabled) return;
+      timeIn.value = b.dataset.time;
+      $$('.chip', timesBox).forEach(c => c.setAttribute('aria-checked', String(c === b)));
+      check('f-time');
+      paintSummary();
+    });
+    timesBox.addEventListener('keydown', e => radioKeys(e, timesBox, b => {
+      timeIn.value = b.dataset.time; check('f-time'); paintSummary();
+    }));
+
+    /* ---- залы --------------------------------------------------------- */
+    const zonesBox = $('#zones');
+    zonesBox.replaceChildren(...[...zoneIn.options].map(o => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(o.value === zoneIn.value));
+      b.dataset.zone = o.value;
+      b.textContent = o.textContent;
+      b.tabIndex = o.value === zoneIn.value ? 0 : -1;
+      return b;
+    }));
+    function pickZone(value) {
+      zoneIn.value = value;
+      $$('.chip', zonesBox).forEach(c => {
+        const on = c.dataset.zone === value;
+        c.setAttribute('aria-checked', String(on));
+        c.tabIndex = on ? 0 : -1;
+      });
+      paintSummary();
+    }
+    zonesBox.addEventListener('click', e => {
+      const b = e.target.closest('.chip');
+      if (b) pickZone(b.dataset.zone);
+    });
+    zonesBox.addEventListener('keydown', e => radioKeys(e, zonesBox, b => pickZone(b.dataset.zone)));
+
+    // стрелки внутри группы радио-плашек
+    function radioKeys(e, box, apply) {
+      const items = $$('.chip:not(:disabled)', box);
+      const i = items.indexOf(document.activeElement);
+      if (i < 0) return;
+      const map = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: items.length - 1 };
+      if (!(e.key in map)) return;
+      e.preventDefault();
+      const next = items[(map[e.key] + items.length) % items.length];
+      items.forEach(c => c.tabIndex = -1);
+      next.tabIndex = 0; next.focus();
+      $$('.chip', box).forEach(c => c.setAttribute('aria-checked', String(c === next)));
+      apply(next);
+    }
+
+    /* ---- счётчик гостей ------------------------------------------------ */
+    const cnt = $('#guests'), cntOut = $('#guests-out');
+    const GUESTS = [...guestsIn.options].map(o => o.value);
+    function paintGuests() {
+      const i = GUESTS.indexOf(guestsIn.value);
+      cntOut.textContent = guestsIn.value === '10+' ? '10+' : guestsIn.value;
+      $('[data-g="-1"]', cnt).disabled = i <= 0;
+      $('[data-g="1"]', cnt).disabled  = i >= GUESTS.length - 1;
+      paintSummary();
+    }
+    $$('[data-g]', cnt).forEach(b => b.addEventListener('click', () => {
+      const i = GUESTS.indexOf(guestsIn.value) + (+b.dataset.g);
+      if (i < 0 || i >= GUESTS.length) return;
+      guestsIn.value = GUESTS[i];
+      check('f-guests');
+      paintGuests();
+      if (hasGsap && !calm()) gsap.fromTo(cntOut, { scale: .82 }, { scale: 1, duration: .3, ease: 'back.out(2)' });
+    }));
+
+    /* ---- строка сводки ------------------------------------------------- */
+    const sumline = $('#sumline');
+    function paintSummary() {
+      if (!form.classList.contains('upgraded')) return;
+      const parts = [];
+      if (dateIn.value) parts.push(cap(fmtShort.format(toDate(dateIn.value))));
+      if (timeIn.value) parts.push(timeIn.value);
+      const head = parts.join(' · ');
+      sumline.hidden = !head;
+      if (!head) return;
+      sumline.replaceChildren(
+        Object.assign(document.createElement('b'), { textContent: head }),
+        Object.assign(document.createElement('span'), {
+          textContent: `${guestWord(guestsIn.value)} · ${zoneIn.value.toLowerCase()}`
+        })
+      );
+    }
+
+    /* ---- шаги ---------------------------------------------------------- */
+    const step1 = $('#step-1'), step2 = $('#step-2');
+    const backBtn = $('#step-back'), nextBtn = $('#step-next');
+    const prog = $('#book-prog'), progText = $('#book-steps'), progBar = $('#book-bar-i');
+    const STEP_NAMES = ['Когда и сколько вас', 'Как с вами связаться'];
+    let step = 1;
+
+    function showStep(n, focus = true) {
+      step = n;
+      step1.hidden = n !== 1;
+      step2.hidden = n !== 2;
+      backBtn.hidden = n === 1;
+      nextBtn.hidden = n !== 1;
+      submitBtn.hidden = n !== 2;
+      progText.innerHTML = `<b>Шаг ${n}</b> из 2 · ${STEP_NAMES[n - 1]}`;
+      progBar.style.width = `${n * 50}%`;
+      const panel = n === 1 ? step1 : step2;
+      if (hasGsap && !calm()) {
+        gsap.fromTo(panel, { opacity: 0, x: n === 2 ? 24 : -24 },
+          { opacity: 1, x: 0, duration: .38, ease: 'power3.out', overwrite: true });
+      }
+      if (focus) {
+        const t = n === 1 ? $('.cal__d[tabindex="0"]', calGrid) : $('#f-name');
+        if (t) t.focus({ preventScroll: true });
+      }
+      $('#book-body') && ($('#book-body').scrollTop = 0);
+    }
+
+    nextBtn.addEventListener('click', () => {
+      const bad = ['f-date', 'f-time', 'f-guests'].filter(id => !check(id));
+      if (bad.length) { showErrors(bad); return; }
+      summary.hidden = true;
+      showStep(2);
+    });
+    backBtn.addEventListener('click', () => showStep(1));
+
+    /* ---- валидация ----------------------------------------------------- */
     const RULES = {
-      'f-name':   v => v.trim().length >= 2      || 'Укажите имя — минимум две буквы, чтобы мы знали, к кому обращаться.',
-      'f-tel':    v => (digits(v) >= 10 && digits(v) <= 12) || 'Введите номер телефона полностью, например +7 900 000-00-00.',
+      'f-name':   v => v.trim().length >= 2 || 'Укажите имя — минимум две буквы, чтобы мы знали, к кому обращаться.',
+      'f-tel':    v => { const d = (v.match(/\d/g) || []).length; return (d >= 10 && d <= 12) || 'Введите номер телефона полностью, например +7 900 000-00-00.'; },
       'f-date':   v => {
         if (!v) return 'Выберите дату визита.';
-        const d = new Date(v + 'T00:00:00');
-        if (d < today)   return 'Эта дата уже прошла — выберите сегодняшний день или позже.';
-        if (d > horizon) return 'Брони принимаем на 60 дней вперёд. Для более дальних дат позвоните нам.';
+        if (v < TODAY)   return 'Эта дата уже прошла — выберите сегодняшний день или позже.';
+        if (v > HORIZON) return 'Брони принимаем на 60 дней вперёд. Для более дальних дат позвоните нам.';
         return true;
       },
-      'f-time':   v => !!v                        || 'Выберите время — стол держим 20 минут после назначенного часа.',
-      'f-guests': v => !!v                        || 'Укажите количество гостей.',
-      'f-ok':     (_, el) => el.checked           || 'Нужно согласие на обработку данных — иначе мы не сможем перезвонить.'
+      'f-time':   v => !!v || 'Выберите время — стол держим 20 минут после назначенного часа.',
+      'f-guests': v => !!v || 'Укажите количество гостей.',
+      'f-ok':     (_, el) => el.checked || 'Нужно согласие на обработку данных — иначе мы не сможем перезвонить.'
     };
-
-    const fieldOf = id => $('#' + id);
-    const labelOf = id => {
-      const l = form.querySelector(`label[for="${id}"]`);
-      return l ? l.textContent.replace('*', '').trim() : id;
-    };
+    const STEP_OF = { 'f-date': 1, 'f-time': 1, 'f-guests': 1, 'f-name': 2, 'f-tel': 2, 'f-ok': 2 };
+    const LABELS  = { 'f-date': 'Дата', 'f-time': 'Время', 'f-guests': 'Гостей',
+                      'f-name': 'Имя', 'f-tel': 'Телефон', 'f-ok': 'Согласие' };
 
     function setError(id, msg) {
-      const el = fieldOf(id);
-      const wrap = el.closest('.f');
+      const el = $('#' + id);
+      const wrap = el.closest('.fld, .f');
+      const mirror = wrap.querySelector('[data-err-mirror]');
       let node = $('.err', wrap);
+      const errId = id + '-err';
+
+      const link = (target, on) => {
+        if (!target) return;
+        const rest = (target.getAttribute('aria-describedby') || '')
+          .split(/\s+/).filter(t => t && t !== errId);
+        if (on) {
+          target.setAttribute('aria-describedby', [errId, ...rest].join(' '));
+          target.setAttribute('aria-invalid', 'true');
+        } else {
+          rest.length ? target.setAttribute('aria-describedby', rest.join(' '))
+                      : target.removeAttribute('aria-describedby');
+          target.removeAttribute('aria-invalid');
+        }
+      };
+
       if (msg) {
         if (!node) {
           node = document.createElement('span');
           node.className = 'err';
-          node.id = id + '-err';
+          node.id = errId;
           wrap.appendChild(node);
         }
         node.textContent = msg;
-        el.setAttribute('aria-invalid', 'true');
-        const described = (el.getAttribute('aria-describedby') || '')
-          .split(/\s+/).filter(t => t && t !== node.id);
-        el.setAttribute('aria-describedby', [node.id, ...described].join(' '));
+        link(el, true); link(mirror, true);
       } else if (node) {
-        const described = (el.getAttribute('aria-describedby') || '')
-          .split(/\s+/).filter(t => t && t !== node.id);
-        described.length ? el.setAttribute('aria-describedby', described.join(' '))
-                         : el.removeAttribute('aria-describedby');
+        link(el, false); link(mirror, false);
         node.remove();
-        el.removeAttribute('aria-invalid');
       }
     }
 
     function check(id) {
-      const el = fieldOf(id);
+      const el = $('#' + id);
       const res = RULES[id](el.value, el);
       setError(id, res === true ? null : res);
       return res === true;
     }
 
+    function focusField(id) {
+      if (STEP_OF[id] !== step) showStep(STEP_OF[id], false);
+      const wrap = $('#' + id).closest('.fld, .f');
+      const mirror = wrap.querySelector('[data-err-mirror]');
+      const inWidget = mirror && form.classList.contains('upgraded')
+        ? mirror.querySelector('[tabindex="0"]:not(:disabled), button:not(:disabled)') : null;
+      (inWidget || $('#' + id)).focus({ preventScroll: false });
+    }
+
+    function showErrors(bad) {
+      sumList.replaceChildren(...bad.map(id => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '#' + id;
+        a.textContent = `${LABELS[id]}: ${$('#' + id + '-err').textContent}`;
+        a.addEventListener('click', ev => { ev.preventDefault(); focusField(id); });
+        li.appendChild(a);
+        return li;
+      }));
+      summary.hidden = false;
+      if (STEP_OF[bad[0]] !== step) showStep(STEP_OF[bad[0]], false);
+      summary.focus({ preventScroll: false });
+      live.textContent = `Не отправлено: ошибок — ${bad.length}.`;
+    }
+
     let attempted = false;
     Object.keys(RULES).forEach(id => {
-      const el = fieldOf(id);
+      const el = $('#' + id);
       const ev = el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'blur';
       el.addEventListener(ev, () => { if (attempted || el.value) check(id); });
       el.addEventListener('input', () => { if (el.getAttribute('aria-invalid') === 'true') check(id); });
@@ -300,32 +662,13 @@
     form.addEventListener('submit', async e => {
       e.preventDefault();
       attempted = true;
-
       const bad = Object.keys(RULES).filter(id => !check(id));
-
-      if (bad.length) {
-        sumList.replaceChildren(...bad.map(id => {
-          const li = document.createElement('li');
-          const a = document.createElement('a');
-          a.href = '#' + id;
-          a.textContent = `${labelOf(id)}: ${$('#' + id + '-err').textContent}`;
-          a.addEventListener('click', ev => {
-            ev.preventDefault();
-            fieldOf(id).focus();
-          });
-          li.appendChild(a);
-          return li;
-        }));
-        summary.hidden = false;
-        summary.focus({ preventScroll: false });
-        live.textContent = `Не отправлено: ошибок — ${bad.length}.`;
-        return;
-      }
+      if (bad.length) { showErrors(bad); return; }
 
       summary.hidden = true;
       sumList.replaceChildren();
-      submit.classList.add('is-busy');
-      submit.disabled = true;
+      submitBtn.classList.add('is-busy');
+      submitBtn.disabled = true;
       live.textContent = 'Отправляем заявку…';
 
       const data = Object.fromEntries(new FormData(form).entries());
@@ -334,9 +677,7 @@
       try {
         if (endpoint) {
           const r = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
           });
           if (!r.ok) throw new Error('HTTP ' + r.status);
         } else {
@@ -345,16 +686,16 @@
           await new Promise(res => setTimeout(res, 700));
         }
 
-        const d = new Date(data.date + 'T00:00:00');
-        const when = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
         $('#done-sum').textContent =
-          `${data.name}, ждём вас ${when} в ${data.time}. ${data.guests} гост${
-            data.guests === '1' ? 'ь' : +data.guests < 5 ? 'я' : 'ей'}, ${data.zone.toLowerCase()}.`;
+          `${data.name}, ждём вас ${cap(fmtShort.format(toDate(data.date)))} в ${data.time}. ` +
+          `${cap(guestWord(data.guests))}, ${data.zone.toLowerCase()}.`;
 
         form.hidden = true;
+        if (prog) prog.hidden = true;
         done.hidden = false;
         done.focus({ preventScroll: false });
         live.textContent = 'Заявка принята.';
+        if (hasGsap && !calm()) gsap.fromTo(done, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .45, ease: 'power3.out' });
       } catch (err) {
         console.error('[ЧУГУН] Не удалось отправить бронь:', err);
         sumList.replaceChildren(Object.assign(document.createElement('li'), {
@@ -365,20 +706,74 @@
         summary.focus();
         live.textContent = 'Ошибка отправки.';
       } finally {
-        submit.classList.remove('is-busy');
-        submit.disabled = false;
+        submitBtn.classList.remove('is-busy');
+        submitBtn.disabled = false;
       }
     });
 
     $('#res-again').addEventListener('click', () => {
       form.reset();
-      dateIn.value = iso(today);
+      dateIn.value = TODAY;
       attempted = false;
       Object.keys(RULES).forEach(id => setError(id, null));
       done.hidden = true;
       form.hidden = false;
-      $('#f-name').focus();
+      if (prog) prog.hidden = false;
+      setView(TODAY); renderCal();
+      renderTimes(); paintGuests(); pickZone(zoneIn.value);
+      showStep(1);
     });
+
+    /* ---- включаем свои виджеты и переносим форму в модальное окно ------- */
+    const dlg = $('#book'), bookBody = $('#book-body'), host = $('#res-host'), cta = $('#res-cta');
+
+    if (dlg && bookBody && typeof dlg.showModal === 'function') {
+      form.classList.add('upgraded');
+      cal.hidden = false; timesBox.hidden = false; zonesBox.hidden = false; cnt.hidden = false;
+      prog.hidden = false;
+      bookBody.append(form, done);
+      host.hidden = true;
+      cta.hidden = false;
+
+      setView(dateIn.value); renderCal(); renderTimes(); paintGuests(); pickZone(zoneIn.value);
+      showStep(1, false);
+
+      let opener = null;
+      const openBook = (zone, trigger) => {
+        opener = trigger || null;
+        if (zone) pickZone(zone);
+        dlg.showModal();
+        document.body.style.overflow = 'hidden';
+        if (hasGsap && !calm()) {
+          const narrow = innerWidth < 700;
+          gsap.fromTo($('.book__in', dlg),
+            { opacity: 0, x: narrow ? 0 : 40, y: narrow ? 30 : 0 },
+            { opacity: 1, x: 0, y: 0, duration: .42, ease: 'expo.out' });
+        }
+      };
+
+      // все «Забронировать» открывают окно, а не прыгают к секции
+      $$('a[href="#reserve"]').forEach(a => { a.dataset.bookOpen = ''; });
+      document.addEventListener('click', e => {
+        const t = e.target.closest('[data-book-open]');
+        if (!t) return;
+        e.preventDefault();
+        openBook(t.dataset.zone, t);
+      });
+
+      $$('[data-book-close]', dlg).forEach(b => b.addEventListener('click', () => dlg.close()));
+      dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+      dlg.addEventListener('close', () => {
+        document.body.style.overflow = '';
+        if (opener && document.contains(opener)) opener.focus({ preventScroll: true });
+      });
+    } else {
+      // модального окна нет — форма остаётся в секции на нативных полях
+      if (cta) cta.hidden = true;
+      showStep(1, false);
+      step1.hidden = false; step2.hidden = false;
+      nextBtn.hidden = true; backBtn.hidden = true; submitBtn.hidden = false;
+    }
   }
 
   /* ── 10. ЖИВОЙ СТАТУС «СЕЙЧАС ОТКРЫТО» ──────────────────────────────
@@ -389,21 +784,11 @@
   if (nowChip && nowText) {
     const OPEN = 12 * 60;                                   // открываемся в 12:00
     const CLOSE = [23 * 60, 24 * 60, 24 * 60, 24 * 60, 24 * 60, 26 * 60, 26 * 60]; // вс…сб
-    const DAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
     const hhmm = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-
-    const moscow = () => {
-      const parts = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Europe/Moscow', weekday: 'short',
-        hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
-      }).formatToParts(new Date());
-      const get = t => parts.find(x => x.type === t).value;
-      return { day: DAYS[get('weekday')], min: (+get('hour') % 24) * 60 + +get('minute') };
-    };
 
     const paint = () => {
       let day, min;
-      try { ({ day, min } = moscow()); } catch { nowChip.hidden = true; return; }
+      try { ({ day, min } = moscowNow()); } catch { nowChip.hidden = true; return; }
       const prev = (day + 6) % 7;
       let open = false, until = 0;
 
@@ -444,7 +829,7 @@
   });
 
   /* ── 12. SMOOTH ANCHORS WITH REAL FOCUS MOVE ────────────────────────── */
-  $$('a[href^="#"]:not([href="#"])').forEach(a => {
+  $$('a[href^="#"]:not([href="#"]):not([data-book-open])').forEach(a => {
     a.addEventListener('click', e => {
       const t = document.getElementById(a.getAttribute('href').slice(1));
       if (!t) return;

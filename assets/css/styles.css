@@ -865,6 +865,7 @@ p { text-wrap: pretty }
   background: linear-gradient(to bottom, var(--ink) 0%, rgba(12,10,9,.88) 40%, rgba(12,10,9,.94) 100%);
 }
 .res__in { max-width: 58rem }
+.res__host { display: grid }
 
 .form { display: grid; gap: var(--s6) }
 .grid { display: grid; gap: var(--s5); grid-template-columns: repeat(2, 1fr) }
@@ -970,6 +971,184 @@ p { text-wrap: pretty }
 .done__note a { color: var(--brass); text-decoration: underline; text-underline-offset: 3px }
 .done:focus-visible { outline-offset: 4px }
 
+/* ── 17b. BOOKING DIALOG ────────────────────────────────────────────────
+   Нативные date/select рисует операционная система — на тёмной теме они
+   выглядят чужими. Поэтому поверх них строятся свои виджеты, а сами поля
+   остаются в разметке: без JavaScript форма работает на них как обычно. */
+.form.upgraded .native { display: none }
+
+.res__cta { display: grid; gap: var(--s4); justify-items: center; text-align: center }
+
+.book {
+  width: min(100%, 52rem); max-width: none;
+  max-height: 100dvh; height: 100dvh;
+  margin: 0 0 0 auto; padding: 0;
+  border: 0; border-inline-start: 1px solid var(--line-soft);
+  background: var(--ink); color: var(--bone);
+  overflow: hidden;
+}
+.book::backdrop { background: rgba(6, 5, 4, .86); backdrop-filter: blur(7px) }
+.book__in {
+  display: grid; grid-template-rows: auto auto 1fr;
+  height: 100dvh;
+}
+.book__hd {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s4);
+  padding: calc(var(--s5) + env(safe-area-inset-top)) var(--s5) var(--s4);
+  border-bottom: 1px solid var(--line-soft);
+}
+.book__ttl { display: grid; gap: var(--s2) }
+.book__hd h2 {
+  font-family: var(--f-disp); font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+  text-transform: uppercase; letter-spacing: -.01em;
+}
+.book__x {
+  display: grid; place-items: center; flex: 0 0 auto;
+  width: 2.75rem; height: 2.75rem;
+  border: 1px solid var(--line-soft); color: var(--bone);
+  transition: border-color var(--d-base) var(--e-out), color var(--d-base) var(--e-out),
+              background var(--d-base) var(--e-out);
+}
+.book__x:hover { border-color: var(--brass); color: var(--brass); background: rgba(212,160,60,.08) }
+
+.book__prog { display: grid; gap: var(--s2); padding: var(--s4) var(--s5) }
+.book__steps {
+  font: 500 var(--t-xs)/1 var(--f-disp);
+  letter-spacing: .16em; text-transform: uppercase; color: var(--faint);
+}
+.book__steps b { color: var(--brass); font-weight: 600 }
+.book__bar { height: 2px; background: var(--smoke); overflow: hidden }
+.book__bar i {
+  display: block; height: 100%; width: 50%;
+  background: linear-gradient(90deg, var(--brass-dim), var(--brass));
+  transition: width var(--d-slow) var(--e-out);
+}
+
+.book__body {
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: var(--s5) var(--s5) calc(var(--s7) + env(safe-area-inset-bottom));
+}
+
+/* ── шаги ─────────────────────────────────────────────────────────────── */
+.step { border: 0; padding: 0; margin: 0; display: grid; gap: var(--s6) }
+.fld { display: grid; gap: var(--s3) }
+.fld--split { display: grid; gap: var(--s6) }
+.fld__lbl {
+  font: 500 var(--t-xs)/1 var(--f-disp);
+  letter-spacing: .18em; text-transform: uppercase; color: var(--mute);
+}
+.fld__hint { font-size: var(--t-xs); color: var(--faint); line-height: 1.5 }
+.native { display: grid; gap: var(--s2) }
+
+/* ── календарь ────────────────────────────────────────────────────────── */
+.cal { display: grid; gap: var(--s3) }
+.cal__hd { display: flex; align-items: center; justify-content: space-between; gap: var(--s3) }
+.cal__m {
+  font: 600 var(--t-lead)/1 var(--f-disp);
+  letter-spacing: .04em; text-transform: uppercase; color: var(--bone);
+}
+.cal__nav {
+  display: grid; place-items: center; flex: 0 0 auto;
+  width: 2.75rem; height: 2.75rem;
+  border: 1px solid var(--line-soft); color: var(--mute);
+  transition: border-color var(--d-base) var(--e-out), color var(--d-base) var(--e-out);
+}
+.cal__nav:hover:not(:disabled) { border-color: var(--brass); color: var(--brass) }
+.cal__nav:disabled { opacity: .35; cursor: not-allowed }
+
+.cal__dow, .cal__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px }
+.cal__dow span {
+  padding-block: var(--s2);
+  font: 500 var(--t-xs)/1 var(--f-disp);
+  letter-spacing: .1em; text-transform: uppercase; color: var(--faint);
+  text-align: center;
+}
+.cal__d {
+  position: relative;
+  display: grid; place-items: center; gap: 2px;
+  min-height: 2.75rem; aspect-ratio: 1;
+  border: 1px solid transparent;
+  background: rgba(36, 31, 26, .45);
+  color: var(--bone);
+  font: 500 var(--t-sm)/1 var(--f-body);
+  font-variant-numeric: tabular-nums;
+  transition: background var(--d-base) var(--e-out), border-color var(--d-base) var(--e-out),
+              color var(--d-base) var(--e-out), transform var(--d-fast) var(--e-out);
+}
+.cal__d:hover:not(:disabled) { border-color: rgba(212,160,60,.5); background: rgba(212,160,60,.10) }
+.cal__d:active:not(:disabled) { transform: scale(.94) }
+.cal__d:disabled { background: transparent; color: var(--ash); cursor: not-allowed }
+.cal__d[aria-pressed="true"] {
+  background: var(--brass); border-color: var(--brass); color: var(--ink); font-weight: 600;
+  box-shadow: 0 0 0 1px var(--brass), 0 8px 26px -10px rgba(224, 85, 43, .9);
+}
+.cal__d[data-today]::after {
+  content: ''; position: absolute; bottom: 5px;
+  width: 3px; height: 3px; border-radius: 50%; background: var(--brass);
+}
+.cal__d[aria-pressed="true"][data-today]::after { background: var(--ink) }
+.cal__pad { visibility: hidden }
+.cal__hint { font-size: var(--t-xs); color: var(--faint) }
+
+/* ── плашки времени и залов ───────────────────────────────────────────── */
+.chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(4.75rem, 1fr)); gap: var(--s2) }
+.chips--wrap { grid-template-columns: 1fr }
+.chip {
+  min-height: 2.75rem; padding: var(--s2) var(--s3);
+  border: 1px solid var(--line-soft);
+  background: rgba(36, 31, 26, .45);
+  color: var(--mute);
+  font: 500 var(--t-sm)/1.2 var(--f-disp);
+  letter-spacing: .06em;
+  font-variant-numeric: tabular-nums;
+  transition: background var(--d-base) var(--e-out), border-color var(--d-base) var(--e-out),
+              color var(--d-base) var(--e-out), transform var(--d-fast) var(--e-out);
+}
+.chips--wrap .chip { text-align: start; letter-spacing: .1em; text-transform: uppercase; font-size: var(--t-xs) }
+.chip:hover:not(:disabled) { border-color: rgba(212,160,60,.5); color: var(--bone); background: rgba(212,160,60,.10) }
+.chip:active:not(:disabled) { transform: scale(.96) }
+.chip[aria-checked="true"] {
+  background: var(--brass); border-color: var(--brass); color: var(--ink); font-weight: 600;
+  box-shadow: 0 8px 26px -12px rgba(224, 85, 43, .9);
+}
+.chip:disabled { opacity: .3; cursor: not-allowed }
+
+/* ── счётчик гостей ───────────────────────────────────────────────────── */
+.cnt {
+  display: inline-grid; grid-template-columns: auto minmax(5rem, auto) auto;
+  align-items: center; justify-self: start;
+  border: 1px solid var(--line-soft);
+}
+.cnt__b {
+  display: grid; place-items: center;
+  width: 3rem; height: 3rem; color: var(--mute);
+  transition: color var(--d-base) var(--e-out), background var(--d-base) var(--e-out);
+}
+.cnt__b:hover:not(:disabled) { color: var(--brass); background: rgba(212,160,60,.10) }
+.cnt__b:disabled { opacity: .3; cursor: not-allowed }
+.cnt__v {
+  padding-inline: var(--s3);
+  border-inline: 1px solid var(--line-soft);
+  font: 600 1.5rem/3rem var(--f-disp); color: var(--bone);
+  text-align: center; white-space: nowrap;
+}
+
+/* ── подвал формы ─────────────────────────────────────────────────────── */
+.form__foot { display: grid; gap: var(--s4); justify-items: start }
+.form__acts { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center }
+.sumline {
+  display: grid; gap: var(--s1);
+  width: 100%;
+  padding: var(--s4) var(--s5);
+  border: 1px solid rgba(212, 160, 60, .32);
+  background: linear-gradient(140deg, rgba(212,160,60,.10), rgba(224,85,43,.05));
+  font-size: var(--t-sm); color: var(--mute);
+}
+.sumline b {
+  font: 600 var(--t-lead)/1.3 var(--f-disp);
+  letter-spacing: .03em; text-transform: uppercase; color: var(--bone);
+}
+
 /* ── 18. FOOTER ─────────────────────────────────────────────────────────── */
 .ft {
   border-top: 1px solid var(--line-soft);
@@ -1032,7 +1211,8 @@ p { text-wrap: pretty }
   .f--half { grid-column: span 1 }
   .info { grid-template-columns: repeat(2, 1fr) }
   .info__c--wide { grid-column: span 2 }
-  .form__foot { grid-template-columns: auto 1fr; align-items: center; gap: var(--s5) }
+  .fld--split { grid-template-columns: repeat(2, 1fr); gap: var(--s5) }
+  .chips--wrap { grid-template-columns: repeat(2, 1fr) }
   .ft__btm { grid-template-columns: 1fr auto; align-items: center }
   .hero__scroll { display: inline-flex }
 }

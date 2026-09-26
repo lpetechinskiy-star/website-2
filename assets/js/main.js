@@ -946,9 +946,15 @@
       return cv;
     });
 
+    // Курсор не рисует пламя, а тревожит воздух: угольки рядом тянутся
+    // за движением и раздуваются, как от дыхания. Только для мыши —
+    // на тач-устройствах курсора нет, и подменять его тапом бессмысленно.
+    const fine = matchMedia('(pointer: fine)').matches;
+
     const makeField = cv => {
       const ctx = cv.getContext('2d');
-      const f = { cv, ps: [], w: 0, h: 0, visible: false };
+      const f = { cv, ps: [], w: 0, h: 0, visible: false,
+                  px: -1e4, py: -1e4, vx: 0, vy: 0, heat: 0 };
 
       const spawn = (p, scattered) => {
         p.x = rnd(-.05, 1.05) * f.w;
@@ -963,6 +969,7 @@
         p.flick = rnd(1.6, 4.2);                 // частота мерцания
         p.peak = rnd(.30, .78);                  // яркость в максимуме
         p.sprite = sprites[(Math.random() * sprites.length) | 0];
+        p.fan = 0;                               // раздувание от курсора
       };
 
       f.resize = () => {
@@ -982,13 +989,37 @@
         f.ps.length = want;
       };
 
+      const R = 170;                                 // радиус влияния курсора
       f.step = (dt, t) => {
+        const heat = f.heat;
         for (const p of f.ps) {
           p.life += dt;
           p.y -= p.vy * dt;
           p.x += Math.sin(p.phase + t * p.freq) * p.sway * dt;
+
+          if (heat > .01) {
+            const dx = p.x - f.px, dy = p.y - f.py;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < R * R) {
+              const d = Math.sqrt(d2) || 1;
+              const k = (1 - d / R) * heat;
+              // Курсор раздувает угли, а не сдувает их: тяга по направлению
+              // движения слабая, расталкивание почти отсутствует, зато
+              // рядом становится жарче и горячий воздух поднимает частицу.
+              // Замерено: при сильной тяге под курсором образовывалась дыра —
+              // яркость падала на 38 % вместо роста.
+              p.x += (f.vx * .16 + dx / d * 5) * k * dt;
+              p.y += (f.vy * .16 + dy / d * 3) * k * dt - k * 16 * dt;
+              p.fan = Math.min(1, p.fan + k * dt * 5.2);
+            }
+          }
+          p.fan *= Math.exp(-dt * 1.25);              // жар спадает не сразу
+
           if (p.life > p.max || p.y < -40) spawn(p, false);
         }
+        f.heat *= Math.exp(-dt * 2.6);                // без движения влияние гаснет
+        f.vx *= Math.exp(-dt * 3.4);
+        f.vy *= Math.exp(-dt * 3.4);
       };
 
       f.draw = t => {
@@ -998,15 +1029,37 @@
           const k = p.life / p.max;
           const fade = Math.min(1, k / .18) * Math.min(1, (1 - k) / .35);
           const flicker = .72 + .28 * Math.sin(t * p.flick + p.phase);
-          const a = fade * flicker * p.peak;
+          const a = fade * flicker * Math.min(1, p.peak + p.fan * .55);
           if (a < .01) continue;
-          const d = p.r * 8;
+          const d = p.r * 8 * (1 + p.fan * .35);
           ctx.globalAlpha = a;
           ctx.drawImage(p.sprite, p.x - d / 2, p.y - d / 2, d, d);
         }
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = 'source-over';
       };
+
+      if (fine) {
+        const host = cv.closest('.sect--embers') || cv.parentElement;
+        let lx = 0, ly = 0, lt = 0;
+        host.addEventListener('pointermove', e => {
+          if (e.pointerType !== 'mouse') return;
+          const r = cv.getBoundingClientRect();
+          const x = e.clientX - r.left, y = e.clientY - r.top;
+          const now = e.timeStamp / 1000;
+          const dt = lt ? Math.min(.12, now - lt) : 0;
+          if (dt > 0) {
+            // скорость курсора в пикселях в секунду, с потолком —
+            // резкий рывок не должен выметать всё поле
+            f.vx = Math.max(-500, Math.min(500, (x - lx) / dt));
+            f.vy = Math.max(-500, Math.min(500, (y - ly) / dt));
+          }
+          lx = x; ly = y; lt = now;
+          f.px = x; f.py = y;
+          f.heat = 1;
+        }, { passive: true });
+        host.addEventListener('pointerleave', () => { f.heat = 0; f.vx = f.vy = 0; }, { passive: true });
+      }
 
       f.resize();
       return f;

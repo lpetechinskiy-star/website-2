@@ -877,10 +877,14 @@
   const heroVid = $('#hero-vid'), motionBtn = $('#hero-motion'), motionTxt = $('#hero-motion-t');
 
   if (heroVid && motionBtn) {
-    // ролик весит около полутора мегабайт, поэтому не тянем его при экономии
-    // трафика и на заведомо медленной сети — постер там остаётся вместо него
+    // Ролик весит около мегабайта — на телефоне это самый тяжёлый файл
+    // страницы. Не тянем его при экономии трафика и на медленной сети:
+    // 3g сюда тоже входит, на нём мегабайт едет несколько секунд и мешает
+    // всему остальному. Вместо него остаётся постер, он и так LCP.
     const conn = navigator.connection || {};
-    const thin = !!conn.saveData || /^(slow-)?2g$/.test(conn.effectiveType || '');
+    const thin = !!conn.saveData
+      || /^(slow-)?2g$|^3g$/.test(conn.effectiveType || '')
+      || (typeof conn.downlink === 'number' && conn.downlink > 0 && conn.downlink < 1.6);
     const source = matchMedia('(min-width: 56em)').matches
       ? heroVid.dataset.wide : heroVid.dataset.tall;
     let wanted = !calm() && !thin;          // чего хочет пользователь, а не что происходит
@@ -918,7 +922,11 @@
       }, { threshold: .08 }).observe($('.hero'));
     }
 
-    wanted ? start() : setBtn(false);
+    // Запрос за видео откладываем до простоя: на телефоне он иначе
+    // конкурирует со шрифтами и первой отрисовкой.
+    const kick = () => { wanted ? start() : setBtn(false); };
+    if (wanted && 'requestIdleCallback' in window) requestIdleCallback(kick, { timeout: 1500 });
+    else kick();
   }
 
   /* ── 13. ТЛЕЮЩИЕ УГОЛЬКИ ────────────────────────────────────────────

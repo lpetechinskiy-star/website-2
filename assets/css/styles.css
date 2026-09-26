@@ -72,6 +72,9 @@ html {
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto } }
 
+/* Серая вспышка iOS поверх собственных состояний нажатия не нужна */
+a, button, [role="tab"], label, summary { -webkit-tap-highlight-color: transparent }
+
 body {
   min-height: 100dvh;
   background: var(--ink);
@@ -109,6 +112,7 @@ p { text-wrap: pretty }
 .skip {
   position: fixed; inset-inline-start: var(--s4); top: -100%;
   z-index: calc(var(--z-modal) + 1);
+  display: inline-flex; align-items: center; min-height: 2.75rem;
   padding: var(--s3) var(--s5);
   background: var(--brass); color: var(--ink);
   font: 600 var(--t-sm)/1 var(--f-body);
@@ -319,7 +323,7 @@ p { text-wrap: pretty }
   letter-spacing: .3em; text-transform: uppercase;
 }
 .logo__sub {
-  font: 400 .625rem/1 var(--f-body);
+  font: 400 .6875rem/1 var(--f-body);
   letter-spacing: .14em; text-transform: uppercase; color: var(--faint);
 }
 
@@ -701,11 +705,21 @@ p { text-wrap: pretty }
   padding-bottom: var(--s2);
   border-bottom: 1px solid var(--line-soft);
   overflow-x: auto; scrollbar-width: none;
+  /* на телефоне вкладки не помещаются: прокрутку подсказывает затухающий
+     правый край, а не догадка, и палец останавливается на вкладке */
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+  -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
+          mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
+}
+@media (min-width: 56em) {
+  .tabs__bar { -webkit-mask-image: none; mask-image: none }
 }
 .tabs__bar::-webkit-scrollbar { display: none }
 .tabs__bar [role="tab"] {
   position: relative;
   flex: 0 0 auto;
+  scroll-snap-align: start;
   min-height: 2.75rem; padding: var(--s2) var(--s4);
   font: 500 var(--t-xs)/1 var(--f-disp);
   letter-spacing: .16em; text-transform: uppercase; color: var(--faint);
@@ -742,6 +756,13 @@ p { text-wrap: pretty }
   background-image: linear-gradient(to right, var(--ash) 35%, transparent 0);
   background-size: 6px 1px; background-repeat: repeat-x;
   opacity: .7;
+}
+/* На телефоне между названием и ценой остаётся сантиметр, и пунктир
+   превращается в четыре точки посреди строки. Убираем его: имя слева,
+   цена справа — этого достаточно. */
+@media (max-width: 40em) {
+  .menu li { grid-template-columns: minmax(0, 1fr) auto }
+  .menu__d { display: none }
 }
 .menu__p {
   font: 600 var(--t-lead)/1 var(--f-disp);
@@ -1008,9 +1029,15 @@ p { text-wrap: pretty }
   transition: text-decoration-color var(--d-base) var(--e-out);
 }
 .info dd a:hover { text-decoration-color: currentColor }
+/* Телефон и почта — это то, по чему жмут с телефона, поэтому у них
+   полноценная высота цели, а не высота строки (было 19 и 22 px). */
+.info__c dd a {
+  display: inline-flex; align-items: center;
+  min-height: 2.75rem;
+  justify-self: start;
+}
 .info__big {
   font: 600 var(--t-lead)/1.2 var(--f-disp); letter-spacing: .04em;
-  justify-self: start;
 }
 
 .metro { display: grid; gap: var(--s3) }
@@ -1043,7 +1070,7 @@ p { text-wrap: pretty }
 
 .info__copy {
   display: inline-flex; align-items: center; gap: var(--s2);
-  justify-self: start; min-height: 2.5rem;
+  justify-self: start; min-height: 2.75rem;
   margin-top: var(--s1); padding: var(--s2) var(--s4);
   border: 1px solid var(--ash); color: var(--mute);
   font: 500 var(--t-xs)/1 var(--f-disp);
@@ -1381,12 +1408,14 @@ p { text-wrap: pretty }
   margin-bottom: var(--s4);
 }
 .ft__nav, .ft__col { display: grid; gap: var(--s2); align-content: start }
-.ft__nav a, .ft__col a {
+/* :not(.btn) — иначе это правило перебивало min-height у .btn--sm
+   (специфичность выше) и кнопка в подвале выходила 36 px вместо 44 */
+.ft__nav a, .ft__col a:not(.btn) {
   font-size: var(--t-sm); color: var(--mute);
-  min-height: 2.25rem; display: inline-flex; align-items: center;
+  min-height: 2.75rem; display: inline-flex; align-items: center;
   transition: color var(--d-base) var(--e-out);
 }
-.ft__nav a:hover, .ft__col a:hover { color: var(--brass) }
+.ft__nav a:hover, .ft__col a:not(.btn):hover { color: var(--brass) }
 .ft__col p { font-size: var(--t-sm); color: var(--faint); margin-top: var(--s2) }
 .ft__col .btn { margin-top: var(--s3); justify-self: start }
 .ft__btm {
@@ -1395,6 +1424,10 @@ p { text-wrap: pretty }
   border-top: 1px solid var(--line-soft);
   font-size: var(--t-xs); color: var(--faint);
 }
+/* Ссылки внутри предложения WCAG от минимального размера цели освобождает,
+   но пальцу от этого не легче: добавляем запас по вертикали, не трогая
+   высоту строки (у строчного элемента вертикальные поля в поток не идут). */
+.ft__btm a, .form__alt a, .evs__note a, .done__note a { padding-block: .45rem }
 .ft__btm a { transition: color var(--d-base) var(--e-out) }
 .ft__btm a:hover { color: var(--brass) }
 
@@ -1410,6 +1443,11 @@ p { text-wrap: pretty }
   transition: transform var(--d-slow) var(--e-out);
 }
 .cta-bar--on { transform: none }
+/* Полоса висит поверх страницы, и нижняя строка подвала уходила под неё.
+   Отступ добавляем только там, где полоса вообще есть. */
+@media (max-width: 55.99em) {
+  .ft__btm { padding-bottom: calc(var(--s5) + 5rem + env(safe-area-inset-bottom)) }
+}
 .cta-bar .btn { flex: 1 }
 .cta-bar__tel {
   display: grid; place-items: center;

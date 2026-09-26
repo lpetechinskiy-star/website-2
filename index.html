@@ -88,7 +88,7 @@
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.6 3h3l1.5 4-2 1.4a13 13 0 0 0 6.5 6.5l1.4-2 4 1.5v3a2 2 0 0 1-2.2 2A17.6 17.6 0 0 1 4.6 5.2 2 2 0 0 1 6.6 3Z"/></svg>
         <span>+7 495 120-84-16</span>
       </a>
-      <a class="btn btn--sm" href="#reserve">Забронировать</a>
+      <a class="btn btn--sm" href="#reserve"><span class="btn__t">Забронировать</span></a>
       <button class="burger" type="button" id="burger" aria-expanded="false" aria-controls="mnav">
         <span class="burger__box" aria-hidden="true"><i></i><i></i><i></i></span>
         <span class="vh">Открыть меню</span>
@@ -113,7 +113,7 @@
       <a href="#place"><em>07</em>Как найти</a>
     </nav>
     <div class="mnav__foot">
-      <a class="btn btn--block" href="#reserve">Забронировать стол</a>
+      <a class="btn btn--block" href="#reserve"><span class="btn__t">Забронировать стол</span></a>
       <a class="mnav__tel" href="tel:+74951208416">+7 495 120-84-16</a>
       <p>Трёхпрудный переулок, 11/13<br>Ежедневно с 12:00</p>
     </div>
@@ -146,8 +146,8 @@
       Мраморная говядина из Воронежской и Липецкой областей — и ничего лишнего.</p>
 
     <div class="hero__cta rv">
-      <a class="btn" href="#reserve">Забронировать стол</a>
-      <a class="btn btn--ghost" href="#menu">Смотреть меню</a>
+      <a class="btn" href="#reserve"><span class="btn__t">Забронировать стол</span></a>
+      <a class="btn btn--ghost" href="#menu"><span class="btn__t">Смотреть меню</span></a>
     </div>
 
     <dl class="hero__stats rv">
@@ -509,7 +509,7 @@
         <img src="assets/img/place-facade.svg" alt="Тёплые окна фасада в Трёхпрудном переулке вечером" width="1600" height="900" loading="lazy" decoding="async">
         <div class="map__ov">
           <p>Карта загрузится с сервера Яндекса</p>
-          <button class="btn btn--ghost btn--sm" type="button" id="map-load">Показать карту</button>
+          <button class="btn btn--ghost btn--sm" type="button" id="map-load"><span class="btn__t">Показать карту</span></button>
           <a class="lnk" href="https://yandex.ru/maps/?text=Москва, Трёхпрудный переулок, 11/13" target="_blank" rel="noopener">Открыть в Яндекс Картах<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7m0 0h-7m7 0v7"/></svg></a>
         </div>
       </div>
@@ -582,7 +582,7 @@
 
     <!-- Показывается, только когда форма уехала в модальное окно -->
     <div class="res__cta rv" id="res-cta" hidden>
-      <button class="btn btn--lg" type="button" data-book-open>Забронировать стол</button>
+      <button class="btn btn--lg" type="button" data-book-open><span class="btn__t">Забронировать стол</span></button>
       <p class="form__alt">Или позвоните — <a href="tel:+74951208416">+7 495 120-84-16</a>, ежедневно с 11:00</p>
     </div>
 
@@ -714,13 +714,11 @@
         <div class="form__foot">
           <p class="sumline" id="sumline" hidden></p>
           <div class="form__acts">
-            <button class="btn btn--ghost" type="button" id="step-back" hidden>
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H6m0 0 5-5m-5 5 5 5"/></svg>
-              Назад
+            <button class="btn btn--ghost btn--back" type="button" id="step-back" hidden>
+              <span class="btn__t">Назад</span>
             </button>
             <button class="btn" type="button" id="step-next" hidden>
-              Далее
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13m0 0-5-5m5 5-5 5"/></svg>
+              <span class="btn__t">Далее</span>
             </button>
             <button class="btn btn--lg" type="submit" id="res-submit">
               <span class="btn__label">Забронировать стол</span>
@@ -741,7 +739,7 @@
         <p id="done-sum"></p>
         <p class="done__note">Перезвоним в течение 15 минут, чтобы подтвердить бронь.
           Если нужно раньше — <a href="tel:+74951208416">+7 495 120-84-16</a>.</p>
-        <button class="btn btn--ghost btn--sm" type="button" id="res-again">Отправить ещё одну заявку</button>
+        <button class="btn btn--ghost btn--sm" type="button" id="res-again"><span class="btn__t">Отправить ещё одну заявку</span></button>
       </div>
     </div>
   </div>
@@ -795,7 +793,7 @@
     <div class="ft__col">
       <h2>Часы</h2>
       <p class="tnum">Пн–Чт&ensp;12:00 — 22:00<br>Пт–Вс&ensp;12:00 — 23:00</p>
-      <a class="btn btn--ghost btn--sm" href="#reserve">Забронировать</a>
+      <a class="btn btn--ghost btn--sm" href="#reserve"><span class="btn__t">Забронировать</span></a>
     </div>
   </div>
 
@@ -810,7 +808,7 @@
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.6 3h3l1.5 4-2 1.4a13 13 0 0 0 6.5 6.5l1.4-2 4 1.5v3a2 2 0 0 1-2.2 2A17.6 17.6 0 0 1 4.6 5.2 2 2 0 0 1 6.6 3Z"/></svg>
     <span class="vh">Позвонить</span>
   </a>
-  <a class="btn btn--sm" href="#reserve">Забронировать стол</a>
+  <a class="btn btn--sm" href="#reserve"><span class="btn__t">Забронировать стол</span></a>
 </div>
 
 <script src="assets/js/vendor/gsap.min.js" defer></script>

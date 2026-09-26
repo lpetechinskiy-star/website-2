@@ -166,28 +166,117 @@ p { text-wrap: pretty }
 @media (max-width: 30em) { .kicker i { display: none } }
 
 .btn {
+  /* Кнопка ведёт себя так: в покое — текст и стрелка справа; при наведении
+     из центра разрастается круг и заливает кнопку, текст уезжает вправо,
+     правая стрелка улетает за край, а слева влетает вторая. Углы за то же
+     время скругляются. Стрелки рисует один слой с двумя масками — так их
+     цвет всегда равен currentColor и меняется вместе с текстом. */
   --btn-bg: var(--brass); --btn-fg: var(--ink); --btn-bd: var(--brass);
-  position: relative;
+  /* Цвет текста при наведении НЕ меняется, и это не лень, а замер.
+     Если текст перекрашивать навстречу заливке, на стыке неизбежно
+     ловится кадр, где он уже светлый, а фон ещё нет (или наоборот):
+     замерено 1.1–2.4:1 на протяжении ~100 мс. Поэтому цвет заливки
+     подобран так, чтобы тот же текст читался и до, и во время, и после:
+     тёмная надпись — светлая заливка, светлая надпись — тёмная. */
+  --btn-fill: var(--bone);           /* цвет круга, заливающего кнопку */
+  --btn-r-on: 12px;                  /* скругление под курсором */
+  --btn-blob: 34rem;                 /* круг в конце — с запасом на диагональ */
+  --btn-shift: .6rem;                /* разбег текста */
+  --btn-pad-i: var(--s6);
+  --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E");
+
+  position: relative; isolation: isolate; overflow: hidden;
   display: inline-flex; align-items: center; justify-content: center; gap: var(--s2);
-  min-height: 3rem; padding: var(--s3) var(--s6);
+  min-height: 3rem;
+  padding: var(--s3) calc(var(--btn-pad-i) + .9rem) var(--s3) var(--btn-pad-i);
   border: 1px solid var(--btn-bd); border-radius: var(--r);
   background: var(--btn-bg); color: var(--btn-fg);
   font: 600 var(--t-sm)/1 var(--f-disp);
   letter-spacing: .12em; text-transform: uppercase;
   cursor: pointer;
-  transition: background var(--d-base) var(--e-out),
-              color    var(--d-base) var(--e-out),
-              border-color var(--d-base) var(--e-out),
+  /* Цвет текста ждёт 90 мс: к этому моменту круг уже накрыл центр кнопки,
+     и надпись не успевает побыть светлой на ещё латунном фоне. */
+  transition: border-color 600ms cubic-bezier(.23, 1, .32, 1),
+              border-radius 600ms cubic-bezier(.23, 1, .32, 1),
+              background var(--d-base) var(--e-out),
               transform var(--d-fast) var(--e-out);
 }
-.btn:hover  { --btn-bg: #E8B558; --btn-bd: #E8B558 }
-.btn:active { transform: translateY(1px) }
-.btn--ghost { --btn-bg: transparent; --btn-fg: var(--bone); --btn-bd: var(--ash) }
-.btn--ghost:hover { --btn-bg: transparent; --btn-fg: var(--brass); --btn-bd: var(--brass) }
-.btn--sm  { min-height: 2.75rem; padding: var(--s2) var(--s5); font-size: var(--t-xs) }
-.btn--lg  { min-height: 3.5rem; padding: var(--s4) var(--s8); font-size: var(--t-sm) }
+
+/* круг-заливка */
+.btn::before {
+  content: ''; position: absolute; z-index: 0;
+  top: 50%; left: 50%;
+  width: var(--btn-blob); height: var(--btn-blob);
+  margin: calc(var(--btn-blob) / -2) 0 0 calc(var(--btn-blob) / -2);
+  border-radius: 50%;
+  background: var(--btn-fill);
+  opacity: 0;
+  /* масштаб, а не ширина с высотой: раскладку это не трогает вовсе */
+  transform: scale(.03);
+  transition: transform 800ms cubic-bezier(.19, 1, .22, 1),
+              opacity 800ms cubic-bezier(.19, 1, .22, 1);
+  pointer-events: none;
+}
+
+/* две стрелки одним слоем: маска слева и маска справа */
+.btn::after {
+  content: ''; position: absolute; z-index: 2; inset: 0;
+  background: currentColor;
+  -webkit-mask-image: var(--arrow), var(--arrow);
+          mask-image: var(--arrow), var(--arrow);
+  -webkit-mask-repeat: no-repeat, no-repeat;
+          mask-repeat: no-repeat, no-repeat;
+  -webkit-mask-size: 1rem 1rem, 1rem 1rem;
+          mask-size: 1rem 1rem, 1rem 1rem;
+  -webkit-mask-position: -25% 50%, calc(100% - 1.15rem) 50%;
+          mask-position: -25% 50%, calc(100% - 1.15rem) 50%;
+  transition: -webkit-mask-position 800ms cubic-bezier(.34, 1.56, .64, 1),
+                      mask-position 800ms cubic-bezier(.34, 1.56, .64, 1),
+              opacity var(--d-fast) var(--e-out);
+  pointer-events: none;
+}
+
+.btn__t, .btn__label {
+  position: relative; z-index: 1;
+  display: inline-block;
+  transform: translateX(calc(var(--btn-shift) * -1));
+  transition: transform 800ms var(--e-out);
+}
+
+.btn:is(:hover, :focus-visible) {
+  /* рамку красим в цвет заливки, а не прячем: фон кнопки лежит под
+     прозрачной рамкой, и от латунной кнопки оставалось кольцо */
+  border-color: var(--btn-fill);
+  border-radius: var(--btn-r-on);
+}
+.btn:is(:hover, :focus-visible)::before { transform: scale(1); opacity: 1 }
+.btn:is(:hover, :focus-visible)::after {
+  -webkit-mask-position: 1.15rem 50%, 125% 50%;
+          mask-position: 1.15rem 50%, 125% 50%;
+}
+.btn:is(:hover, :focus-visible) :is(.btn__t, .btn__label) {
+  transform: translateX(var(--btn-shift));
+}
+.btn:active { transform: scale(.96) }
+
+/* «Назад» смотрит в другую сторону: зеркалим слой со стрелками
+   и меняем знак разбега */
+.btn--back::after { transform: scaleX(-1) }
+.btn--back .btn__t { transform: translateX(var(--btn-shift)) }
+.btn--back:is(:hover, :focus-visible) .btn__t { transform: translateX(calc(var(--btn-shift) * -1)) }
+
+.btn--ghost {
+  --btn-bg: transparent; --btn-fg: var(--bone); --btn-bd: var(--ash);
+  /* тёмный уголь под светлой надписью: 7.9:1 в конце, ниже 7.3:1 не опускается */
+  --btn-fill: #7A3418; --btn-bd-on: var(--brass);
+}
+.btn--ghost:is(:hover, :focus-visible) { border-color: var(--btn-bd-on) }
+.btn--sm  { --btn-pad-i: var(--s5); min-height: 2.75rem; padding-block: var(--s2); font-size: var(--t-xs) }
+.btn--lg  { --btn-pad-i: var(--s8); min-height: 3.5rem; padding-block: var(--s4); font-size: var(--t-sm) }
 .btn--block { width: 100% }
 .btn[aria-disabled="true"], .btn:disabled { opacity: .45; cursor: not-allowed }
+/* пока идёт отправка, стрелки мешают спиннеру */
+.btn.is-busy::after { opacity: 0 }
 
 .lnk {
   display: inline-flex; align-items: center; gap: var(--s2);

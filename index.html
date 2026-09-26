@@ -667,16 +667,18 @@
               <span class="hint" id="h-tel">На этот номер позвоним для подтверждения</span>
             </p>
 
-            <p class="f f--full">
-              <label for="f-occ">Повод</label>
-              <select id="f-occ" name="occasion">
-                <option value="">Без повода</option>
-                <option>День рождения</option>
-                <option>Годовщина</option>
-                <option>Деловой ужин</option>
-                <option>Дегустация с шефом</option>
-              </select>
-            </p>
+            <div class="fld">
+              <p class="fld__lbl" id="lbl-occ">Повод</p>
+              <p class="native"><label for="f-occ">Повод визита</label>
+                <select id="f-occ" name="occasion">
+                  <option value="">Без повода</option>
+                  <option>День рождения</option>
+                  <option>Годовщина</option>
+                  <option>Деловой ужин</option>
+                  <option>Дегустация с шефом</option>
+                </select></p>
+              <div class="chips chips--wrap" id="occs" role="radiogroup" aria-labelledby="lbl-occ" hidden></div>
+            </div>
 
             <p class="f f--full">
               <label for="f-note">Пожелания</label>

@@ -1039,6 +1039,8 @@ p { text-wrap: pretty }
 }
 .fld__hint { font-size: var(--t-xs); color: var(--faint); line-height: 1.5 }
 .native { display: grid; gap: var(--s2) }
+/* свои виджеты внутри сетки шага 2 занимают всю ширину */
+.grid > .fld { grid-column: 1 / -1 }
 
 /* ── календарь ────────────────────────────────────────────────────────── */
 .cal { display: grid; gap: var(--s3) }
@@ -1075,7 +1077,7 @@ p { text-wrap: pretty }
   transition: background var(--d-base) var(--e-out), border-color var(--d-base) var(--e-out),
               color var(--d-base) var(--e-out), transform var(--d-fast) var(--e-out);
 }
-.cal__d:hover:not(:disabled) { border-color: rgba(212,160,60,.5); background: rgba(212,160,60,.10) }
+.cal__d:hover:not(:disabled):not([aria-pressed="true"]) { border-color: rgba(212,160,60,.5); background: rgba(212,160,60,.10) }
 .cal__d:active:not(:disabled) { transform: scale(.94) }
 .cal__d:disabled { background: transparent; color: var(--ash); cursor: not-allowed }
 .cal__d[aria-pressed="true"] {
@@ -1104,8 +1106,13 @@ p { text-wrap: pretty }
   transition: background var(--d-base) var(--e-out), border-color var(--d-base) var(--e-out),
               color var(--d-base) var(--e-out), transform var(--d-fast) var(--e-out);
 }
-.chips--wrap .chip { text-align: start; letter-spacing: .1em; text-transform: uppercase; font-size: var(--t-xs) }
-.chip:hover:not(:disabled) { border-color: rgba(212,160,60,.5); color: var(--bone); background: rgba(212,160,60,.10) }
+.chips--wrap .chip {
+  display: flex; align-items: center; gap: var(--s2);
+  text-align: start; letter-spacing: .1em; text-transform: uppercase; font-size: var(--t-xs);
+}
+.chip svg { flex: 0 0 auto; opacity: .85 }
+.chip[aria-checked="true"] svg { opacity: 1 }
+.chip:hover:not(:disabled):not([aria-checked="true"]) { border-color: rgba(212,160,60,.5); color: var(--bone); background: rgba(212,160,60,.10) }
 .chip:active:not(:disabled) { transform: scale(.96) }
 .chip[aria-checked="true"] {
   background: var(--brass); border-color: var(--brass); color: var(--ink); font-weight: 600;

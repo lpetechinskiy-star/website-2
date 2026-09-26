@@ -450,32 +450,64 @@
       timeIn.value = b.dataset.time; check('f-time'); paintSummary();
     }));
 
-    /* ---- залы --------------------------------------------------------- */
-    const zonesBox = $('#zones');
-    zonesBox.replaceChildren(...[...zoneIn.options].map(o => {
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'chip';
-      b.setAttribute('role', 'radio');
-      b.setAttribute('aria-checked', String(o.value === zoneIn.value));
-      b.dataset.zone = o.value;
-      b.textContent = o.textContent;
-      b.tabIndex = o.value === zoneIn.value ? 0 : -1;
-      return b;
-    }));
-    function pickZone(value) {
-      zoneIn.value = value;
-      $$('.chip', zonesBox).forEach(c => {
-        const on = c.dataset.zone === value;
-        c.setAttribute('aria-checked', String(on));
-        c.tabIndex = on ? 0 : -1;
+    /* ---- залы и повод: плашки вместо системного выпадающего списка ----
+       Сам <select> стилизуется, а вот список, который он открывает, рисует
+       операционная система — на тёмной теме он выглядит чужеродно. Поэтому
+       строим плашки поверх, а нативный select остаётся носителем значения. */
+    const OCC_ICONS = {
+      '':                  '<circle cx="12" cy="12" r="7.5"/>',
+      'День рождения':     '<path d="M4.5 20.5h15M6 20.5v-5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5M9 13.5v-2m3 2v-2m3 2v-2M9 8.6V7.4m3 1.2V7.4m3 1.2V7.4"/>',
+      'Годовщина':         '<path d="M12 20s-7-4.6-7-9.3A4 4 0 0 1 12 8.2 4 4 0 0 1 19 10.7C19 15.4 12 20 12 20Z"/>',
+      'Деловой ужин':      '<rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M9 7.5V6a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 6v1.5"/>',
+      'Дегустация с шефом':'<path d="M12 4.6c2.3 2.9 1 4.5.3 6-.8 1.7.4 2.9 1.5 2.2 1.4-.8 1.6-2.5 1.6-2.5 1.7 1.8 2.7 3.8 2.7 5.8a6.1 6.1 0 1 1-12.2 0c0-3.9 3.2-6 4.5-8.7.5-1.3.9-2.2 1.6-2.8Z"/>'
+    };
+
+    function buildChips(box, select, icons) {
+      box.replaceChildren(...[...select.options].map(o => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chip';
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', String(o.value === select.value));
+        b.dataset.val = o.value;
+        b.tabIndex = o.value === select.value ? 0 : -1;
+        if (icons && icons[o.value] !== undefined) {
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('viewBox', '0 0 24 24');
+          svg.setAttribute('width', '16'); svg.setAttribute('height', '16');
+          svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor');
+          svg.setAttribute('stroke-width', '1.6');
+          svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
+          svg.setAttribute('aria-hidden', 'true');
+          svg.innerHTML = icons[o.value];
+          b.append(svg);
+        }
+        b.append(document.createTextNode(o.textContent));
+        return b;
+      }));
+
+      const pick = value => {
+        select.value = value;
+        $$('.chip', box).forEach(c => {
+          const on = c.dataset.val === value;
+          c.setAttribute('aria-checked', String(on));
+          c.tabIndex = on ? 0 : -1;
+        });
+        paintSummary();
+      };
+
+      box.addEventListener('click', e => {
+        const b = e.target.closest('.chip');
+        if (b) pick(b.dataset.val);
       });
-      paintSummary();
+      box.addEventListener('keydown', e => radioKeys(e, box, b => pick(b.dataset.val)));
+      return pick;
     }
-    zonesBox.addEventListener('click', e => {
-      const b = e.target.closest('.chip');
-      if (b) pickZone(b.dataset.zone);
-    });
-    zonesBox.addEventListener('keydown', e => radioKeys(e, zonesBox, b => pickZone(b.dataset.zone)));
+
+    const zonesBox = $('#zones'), occsBox = $('#occs');
+    const occIn = $('#f-occ');
+    const pickZone = buildChips(zonesBox, zoneIn);
+    const pickOcc  = buildChips(occsBox, occIn, OCC_ICONS);
 
     // стрелки внутри группы радио-плашек
     function radioKeys(e, box, apply) {
@@ -525,6 +557,7 @@
         Object.assign(document.createElement('b'), { textContent: head }),
         Object.assign(document.createElement('span'), {
           textContent: `${guestWord(guestsIn.value)} · ${zoneIn.value.toLowerCase()}`
+                     + (occIn.value ? ` · ${occIn.value.toLowerCase()}` : '')
         })
       );
     }
@@ -720,7 +753,7 @@
       form.hidden = false;
       if (prog) prog.hidden = false;
       setView(TODAY); renderCal();
-      renderTimes(); paintGuests(); pickZone(zoneIn.value);
+      renderTimes(); paintGuests(); pickZone(zoneIn.value); pickOcc(occIn.value);
       showStep(1);
     });
 
@@ -729,13 +762,15 @@
 
     if (dlg && bookBody && typeof dlg.showModal === 'function') {
       form.classList.add('upgraded');
-      cal.hidden = false; timesBox.hidden = false; zonesBox.hidden = false; cnt.hidden = false;
+      cal.hidden = false; timesBox.hidden = false; cnt.hidden = false;
+      zonesBox.hidden = false; occsBox.hidden = false;
       prog.hidden = false;
       bookBody.append(form, done);
       host.hidden = true;
       cta.hidden = false;
 
-      setView(dateIn.value); renderCal(); renderTimes(); paintGuests(); pickZone(zoneIn.value);
+      setView(dateIn.value); renderCal(); renderTimes(); paintGuests();
+      pickZone(zoneIn.value); pickOcc(occIn.value);
       showStep(1, false);
 
       let opener = null;

@@ -381,7 +381,69 @@
     });
   }
 
-  /* ── 10. SMOOTH ANCHORS WITH REAL FOCUS MOVE ────────────────────────── */
+  /* ── 10. ЖИВОЙ СТАТУС «СЕЙЧАС ОТКРЫТО» ──────────────────────────────
+     Считаем по московскому времени, а не по часам гостя: иначе человек
+     из Берлина увидит «закрыто», когда в зале полный сервис. Плашка
+     появляется только здесь — без скрипта остаётся статичное расписание. */
+  const nowChip = $('#open-now'), nowText = $('#open-now-t');
+  if (nowChip && nowText) {
+    const OPEN = 12 * 60;                                   // открываемся в 12:00
+    const CLOSE = [23 * 60, 24 * 60, 24 * 60, 24 * 60, 24 * 60, 26 * 60, 26 * 60]; // вс…сб
+    const DAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const hhmm = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+
+    const moscow = () => {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Moscow', weekday: 'short',
+        hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+      }).formatToParts(new Date());
+      const get = t => parts.find(x => x.type === t).value;
+      return { day: DAYS[get('weekday')], min: (+get('hour') % 24) * 60 + +get('minute') };
+    };
+
+    const paint = () => {
+      let day, min;
+      try { ({ day, min } = moscow()); } catch { nowChip.hidden = true; return; }
+      const prev = (day + 6) % 7;
+      let open = false, until = 0;
+
+      if (min >= OPEN && min < CLOSE[day]) {                 // обычный сервис
+        open = true; until = CLOSE[day];
+      } else if (CLOSE[prev] > 24 * 60 && min < CLOSE[prev] - 24 * 60) {
+        open = true; until = CLOSE[prev] - 24 * 60;          // ночь пятницы и субботы
+      }
+
+      nowChip.dataset.state = open ? 'open' : 'closed';
+      nowText.textContent = open
+        ? `Сейчас открыто · до ${hhmm(until)}`
+        : (min < OPEN ? 'Закрыто · откроемся в 12:00' : 'Закрыто · завтра с 12:00');
+      nowChip.hidden = false;
+    };
+
+    paint();
+    setInterval(paint, 60000);
+  }
+
+  /* ── 11. КОПИРОВАНИЕ АДРЕСА ─────────────────────────────────────────── */
+  $$('[data-copy]').forEach(btn => {
+    const label = $('.info__copy-t', btn);
+    const original = label.textContent;
+    let timer;
+    btn.addEventListener('click', async () => {
+      clearTimeout(timer);
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        label.textContent = 'Адрес скопирован';
+        btn.dataset.done = '1';
+      } catch {
+        // буфер недоступен (не защищённый контекст или запрет) — говорим честно
+        label.textContent = 'Скопируйте вручную';
+      }
+      timer = setTimeout(() => { label.textContent = original; delete btn.dataset.done; }, 2600);
+    });
+  });
+
+  /* ── 12. SMOOTH ANCHORS WITH REAL FOCUS MOVE ────────────────────────── */
   $$('a[href^="#"]:not([href="#"])').forEach(a => {
     a.addEventListener('click', e => {
       const t = document.getElementById(a.getAttribute('href').slice(1));

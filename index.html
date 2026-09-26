@@ -479,21 +479,15 @@
 <!-- ═══════════════════════════════════════════════ PLACE ══════════ -->
 <section class="sect" id="place" aria-labelledby="place-h">
   <div class="wrap place">
-    <div class="place__txt">
+    <div class="place__head">
       <p class="kicker rv"><span>07 — Как найти</span></p>
       <h2 class="sh__h rv" id="place-h">Трёхпрудный,<br>11/13</h2>
-
-      <dl class="info">
-        <div class="rv-s"><dt>Адрес</dt><dd>Москва, Трёхпрудный переулок, 11/13<br><span>Вход со стороны переулка, под латунной вывеской</span></dd></div>
-        <div class="rv-s"><dt>Метро</dt><dd>Маяковская — 7 минут пешком<br>Пушкинская — 9 минут пешком</dd></div>
-        <div class="rv-s"><dt>Часы</dt><dd>Пн–Чт&ensp;<span class="tnum">12:00 — 00:00</span><br>Пт–Сб&ensp;<span class="tnum">12:00 — 02:00</span><br>Вс&ensp;<span class="tnum">12:00 — 23:00</span></dd></div>
-        <div class="rv-s"><dt>Парковка</dt><dd>Валет с 18:00 у входа<br><span>Городская парковка в переулке</span></dd></div>
-        <div class="rv-s"><dt>Связь</dt><dd><a href="tel:+74951208416">+7 495 120-84-16</a><br><a href="mailto:hello@chugun.moscow">hello@chugun.moscow</a></dd></div>
-      </dl>
+      <p class="sh__lead rv">Пять минут от Патриарших прудов. Вход со стороны переулка,
+        под латунной вывеской — её видно от самого угла.</p>
     </div>
 
     <div class="place__map rv-s">
-      <div class="map" id="map" data-src="https://yandex.ru/map-widget/v1/?ll=37.595%2C55.766&z=16&pt=37.595,55.766,pm2rdm">
+      <div class="map" id="map" data-src="https://yandex.ru/map-widget/v1/?ll=37.595%2C55.766&amp;z=16&amp;pt=37.595,55.766,pm2rdm">
         <img src="assets/img/place-facade.svg" alt="Тёплые окна фасада в Трёхпрудном переулке вечером" width="1600" height="900" loading="lazy" decoding="async">
         <div class="map__ov">
           <p>Карта загрузится с сервера Яндекса</p>
@@ -502,6 +496,59 @@
         </div>
       </div>
     </div>
+
+    <dl class="info">
+      <div class="info__c info__c--wide rv-s">
+        <dt><span class="info__ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg></span>Адрес</dt>
+        <dd>
+          <b>Трёхпрудный переулок, 11/13</b>
+          <span>Москва, 123001 · вход со стороны переулка, под латунной вывеской</span>
+          <button class="info__copy" type="button" data-copy="Москва, Трёхпрудный переулок, 11/13">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M15 6.5V5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15h1"/></svg>
+            <span class="info__copy-t" aria-live="polite">Скопировать адрес</span>
+          </button>
+        </dd>
+      </div>
+
+      <div class="info__c rv-s">
+        <dt><span class="info__ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18.5 7 6l5 7.5L17 6l3 12.5"/></svg></span>Метро</dt>
+        <dd>
+          <ul class="metro">
+            <li><i style="background:#4FB04F" aria-hidden="true"></i><b>Маяковская</b><span>7 минут</span></li>
+            <li><i style="background:#943D8F" aria-hidden="true"></i><b>Пушкинская</b><span>9 минут</span></li>
+          </ul>
+        </dd>
+      </div>
+
+      <div class="info__c rv-s">
+        <dt><span class="info__ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3.2 2"/></svg></span>Часы</dt>
+        <dd>
+          <p class="info__now" id="open-now" hidden><span class="info__dot" aria-hidden="true"></span><span id="open-now-t"></span></p>
+          <ul class="hours">
+            <li><b>Пн–Чт</b><span class="tnum">12:00 — 00:00</span></li>
+            <li><b>Пт–Сб</b><span class="tnum">12:00 — 02:00</span></li>
+            <li><b>Вс</b><span class="tnum">12:00 — 23:00</span></li>
+          </ul>
+        </dd>
+      </div>
+
+      <div class="info__c rv-s">
+        <dt><span class="info__ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 15.5h15m-15 0-1-4 1.6-3.6A2 2 0 0 1 6.9 6.7h10.2a2 2 0 0 1 1.8 1.2l1.6 3.6-1 4m-15 0v2.3h2.8v-2.3m9.4 0v2.3h2.8v-2.3"/><circle cx="7.8" cy="13" r=".9"/><circle cx="16.2" cy="13" r=".9"/></svg></span>Парковка</dt>
+        <dd>
+          <b>Валет с 18:00</b>
+          <span>Подъезжайте ко входу, ключи передайте швейцару. Днём — городская парковка в переулке.</span>
+        </dd>
+      </div>
+
+      <div class="info__c rv-s">
+        <dt><span class="info__ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 3h3l1.5 4-2 1.4a13 13 0 0 0 6.5 6.5l1.4-2 4 1.5v3a2 2 0 0 1-2.2 2A17.6 17.6 0 0 1 4.6 5.2 2 2 0 0 1 6.6 3Z"/></svg></span>Связь</dt>
+        <dd>
+          <a class="info__big" href="tel:+74951208416">+7 495 120-84-16</a>
+          <a href="mailto:hello@chugun.moscow">hello@chugun.moscow</a>
+          <span>Бронь по телефону — ежедневно с 11:00</span>
+        </dd>
+      </div>
+    </dl>
   </div>
 </section>
 

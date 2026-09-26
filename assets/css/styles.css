@@ -733,22 +733,117 @@ p { text-wrap: pretty }
 .evs__note a { color: var(--brass); text-decoration: underline; text-underline-offset: 3px }
 
 /* ── 16. PLACE ──────────────────────────────────────────────────────────── */
-.place { display: grid; gap: var(--s8) }
-.info { display: grid; margin-top: var(--s6) }
-.info > div {
-  display: grid; grid-template-columns: 1fr; gap: var(--s1);
-  padding-block: var(--s4);
-  border-top: 1px solid var(--line-soft);
+.place { display: grid; gap: var(--s7) }
+.place__head { display: grid; gap: var(--s4); align-content: start }
+
+/* ── контактные карточки ──────────────────────────────────────────────
+   Плоский список терминов превращён в сетку карточек: латунный уголок
+   прорисовывается при наведении, снизу поднимается отблеск углей.
+   Ничего не двигается в потоке — только opacity и transform. */
+.info { display: grid; gap: var(--s3); grid-template-columns: 1fr }
+
+.info__c {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: grid; gap: var(--s4); align-content: start;
+  padding: var(--s5);
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(158deg, rgba(36, 31, 26, .58), rgba(12, 10, 9, .30));
+  transition: border-color var(--d-slow) var(--e-out);
 }
+.info__c::before {                      /* тлеющие угли под карточкой */
+  content: ''; position: absolute; z-index: -1;
+  inset-inline: -25%; bottom: -70%; height: 150%;
+  background: radial-gradient(58% 100% at 50% 100%,
+              rgba(224, 85, 43, .40), rgba(212, 160, 60, .13) 44%, transparent 74%);
+  opacity: 0; transform: translateY(20%);
+  transition: opacity var(--d-slow) var(--e-out), transform var(--d-slow) var(--e-out);
+}
+.info__c::after {                       /* латунный уголок */
+  content: ''; position: absolute; top: 0; inset-inline-start: 0;
+  width: 14px; height: 14px;
+  border-top: 1px solid var(--brass); border-inline-start: 1px solid var(--brass);
+  opacity: 0;
+  transition: opacity var(--d-base) var(--e-out),
+              width var(--d-slow) var(--e-out), height var(--d-slow) var(--e-out);
+}
+.info__c:hover, .info__c:focus-within { border-color: rgba(212, 160, 60, .42) }
+.info__c:hover::before, .info__c:focus-within::before { opacity: 1; transform: none }
+.info__c:hover::after,  .info__c:focus-within::after  { opacity: 1; width: 32px; height: 32px }
+
 .info dt {
+  display: flex; align-items: center; gap: var(--s3);
   font: 500 var(--t-xs)/1 var(--f-disp);
   letter-spacing: .18em; text-transform: uppercase; color: var(--faint);
+  transition: color var(--d-base) var(--e-out);
 }
-.info dd { font-size: var(--t-sm); color: var(--bone); line-height: 1.7 }
-.info dd span { color: var(--faint) }
-.info dd a { color: var(--brass); text-decoration: underline; text-underline-offset: 3px }
+.info__c:hover dt, .info__c:focus-within dt { color: var(--brass) }
+.info__ic {
+  display: grid; place-items: center; flex: 0 0 auto;
+  width: 2.5rem; height: 2.5rem;
+  border: 1px solid var(--line-soft); color: var(--brass);
+  transition: border-color var(--d-base) var(--e-out), background var(--d-base) var(--e-out),
+              transform var(--d-base) var(--e-out);
+}
+.info__c:hover .info__ic, .info__c:focus-within .info__ic {
+  border-color: rgba(212, 160, 60, .5); background: rgba(212, 160, 60, .09);
+  transform: translateY(-2px);
+}
+
+.info dd { display: grid; gap: var(--s2); font-size: var(--t-sm); color: var(--mute); line-height: 1.6 }
+.info dd b { font: 600 var(--t-lead)/1.35 var(--f-body); color: var(--bone) }
+.info dd > span { color: var(--faint) }
+.info dd a {
+  color: var(--brass); text-decoration: underline; text-underline-offset: 3px;
+  text-decoration-color: rgba(212, 160, 60, .35);
+  transition: text-decoration-color var(--d-base) var(--e-out);
+}
+.info dd a:hover { text-decoration-color: currentColor }
+.info__big {
+  font: 600 var(--t-lead)/1.2 var(--f-disp); letter-spacing: .04em;
+  justify-self: start;
+}
+
+.metro { display: grid; gap: var(--s3) }
+.metro li { display: flex; align-items: center; gap: var(--s3) }
+.metro i { width: .55rem; height: .55rem; border-radius: 50%; flex: 0 0 auto }
+.metro b { font: 500 var(--t-sm)/1.3 var(--f-body); color: var(--bone) }
+.metro span { margin-inline-start: auto; color: var(--faint); white-space: nowrap }
+
+.hours { display: grid; gap: var(--s2) }
+.hours li { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s4) }
+.hours b { font: 500 var(--t-sm)/1 var(--f-body); color: var(--faint) }
+.hours span { color: var(--bone) }
+
+/* живой статус — появляется только когда отработал скрипт */
+.info__now {
+  display: inline-flex; align-items: center; gap: var(--s2);
+  justify-self: start;
+  padding: var(--s1) var(--s3);
+  border: 1px solid rgba(212, 160, 60, .45);
+  font: 500 var(--t-xs)/1.7 var(--f-disp);
+  letter-spacing: .12em; text-transform: uppercase; color: var(--brass);
+}
+.info__now[data-state="closed"] { border-color: var(--ash); color: var(--faint) }
+.info__dot { width: .4rem; height: .4rem; border-radius: 50%; background: currentColor; flex: 0 0 auto }
+.info__now[data-state="open"] .info__dot { animation: pulse 2.8s var(--e-in-out) infinite }
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 160, 60, .55) }
+  60%      { box-shadow: 0 0 0 7px rgba(212, 160, 60, 0) }
+}
+
+.info__copy {
+  display: inline-flex; align-items: center; gap: var(--s2);
+  justify-self: start; min-height: 2.5rem;
+  margin-top: var(--s1); padding: var(--s2) var(--s4);
+  border: 1px solid var(--ash); color: var(--mute);
+  font: 500 var(--t-xs)/1 var(--f-disp);
+  letter-spacing: .14em; text-transform: uppercase;
+  transition: border-color var(--d-base) var(--e-out), color var(--d-base) var(--e-out);
+}
+.info__copy:hover, .info__copy[data-done] { border-color: var(--brass); color: var(--brass) }
 
 .map { position: relative; aspect-ratio: 4 / 3; border: 1px solid var(--line-soft); overflow: hidden }
+@media (min-width: 56em) { .map { aspect-ratio: 16 / 9 } }
 .map img, .map iframe { width: 100%; height: 100%; object-fit: cover; border: 0; display: block }
 .map__ov {
   position: absolute; inset: 0;
@@ -935,7 +1030,8 @@ p { text-wrap: pretty }
   .gal__i--tall img { height: 100%; aspect-ratio: auto }
   .duo  { grid-template-columns: repeat(2, 1fr) }
   .f--half { grid-column: span 1 }
-  .info > div { grid-template-columns: 9rem 1fr; gap: var(--s4) }
+  .info { grid-template-columns: repeat(2, 1fr) }
+  .info__c--wide { grid-column: span 2 }
   .form__foot { grid-template-columns: auto 1fr; align-items: center; gap: var(--s5) }
   .ft__btm { grid-template-columns: 1fr auto; align-items: center }
   .hero__scroll { display: inline-flex }
@@ -950,7 +1046,11 @@ p { text-wrap: pretty }
   .ev { min-height: 30rem }
   .story { grid-template-columns: 5fr 7fr; gap: var(--s9); align-items: start }
   .story__media { position: sticky; top: calc(var(--hdr-h) + var(--s5)) }
-  .place { grid-template-columns: 5fr 7fr; gap: var(--s9); align-items: start }
+  .place { grid-template-columns: 5fr 7fr; gap: var(--s7) var(--s9); align-items: start }
+  .place__head { grid-column: 1; grid-row: 1 }
+  .place__map  { grid-column: 2; grid-row: 1 }
+  .info        { grid-column: 1 / -1; grid-template-columns: repeat(3, 1fr) }
+  .info__c--wide { grid-column: span 2 }
   .sh--row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s8); align-items: end }
   .sh--row .sh__lead { justify-self: end }
   .f--third { grid-column: span 1 }

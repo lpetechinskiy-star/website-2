@@ -64,11 +64,17 @@ FCP/LCP ≈ 370 мс, CLS = 0 на локальном сервере.
 
 ```bash
 MI="minterpolate=fps=50:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1"
+BG="scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,\
+gblur=sigma=70,eq=brightness=-0.42:saturation=0.30"
+
 ffmpeg -i source.mp4 -filter_complex "\
 [0:v]split=2[s0][s1];\
-[s0]trim=start=0.2:end=3.6,setpts=(PTS-STARTPTS)/0.65,crop=720:405:0:520,$MI,scale=1280:720:flags=lanczos,setsar=1[a];\
-[s1]trim=start=12.8:end=15.4,setpts=(PTS-STARTPTS)/0.65,crop=720:405:0:480,$MI,scale=1280:720:flags=lanczos,setsar=1[b];\
-[a][b]xfade=transition=fade:duration=0.7:offset=4.531[x];\
+[s0]trim=start=0.2:end=3.6,setpts=(PTS-STARTPTS)/0.65,crop=720:600:0:432,$MI,split=2[a0][a1];\
+[a0]$BG[abg];[a1]scale=-2:720:flags=lanczos[afg];[abg][afg]overlay=W-w:0,setsar=1[A];\
+[s1]trim=start=12.8:end=15.4,setpts=(PTS-STARTPTS)/0.65,crop=720:600:0:440,$MI,split=2[b0][b1];\
+[b0]$BG[bbg];[b1]scale=-2:720:flags=lanczos,eq=brightness=0.06:contrast=1.10:saturation=1.10[bfg];\
+[bbg][bfg]overlay=W-w:0,setsar=1[B];\
+[A][B]xfade=transition=fade:duration=0.7:offset=4.531[x];\
 [x]fade=t=in:st=0:d=0.5,fade=t=out:st=7.93:d=0.6[v]" \
   -map "[v]" -an -c:v libx264 -crf 28 -preset slow -pix_fmt yuv420p \
   -profile:v main -movflags +faststart assets/video/hero-wide.mp4
@@ -83,8 +89,20 @@ ffmpeg -i source.mp4 -filter_complex "\
   движения** (`mi_mode=mci`), а не дублирует существующие. Именно поэтому
   ролик идёт в 50 fps и выглядит плавно, не ускоряясь. Режим `blend` тоже
   доступен, но он смешивает соседние кадры и даёт заметное двоение на соли.
-- `crop=720:405:0:520` вырезает из вертикального кадра горизонтальную полосу;
+- `crop=720:600:0:432` вырезает из вертикального кадра горизонтальную полосу;
   последнее число — отступ сверху, им подбирается, что попадёт в кадр.
+- **Почему 600 строк, а не 405.** Полоса 16:9 из вертикального исходника —
+  это всегда узкий срез, и мясо в нём не читалось. Чтобы показать больше
+  кадра, он берётся выше (600 строк) и уже не растягивается на всю ширину:
+  недостающее добирается сильно размытой и притемнённой копией того же
+  кадра (`$BG`). Она читается как виньетка, а не как вторая картинка.
+- `overlay=W-w:0` прижимает кадр вправо. Так стык между кадром и заливкой
+  остаётся **один** и попадает на левую сторону, где стоит текст и где
+  затемнение и так почти непрозрачное — шва не видно. При центрировании
+  стыка было бы два, и правый бросался бы в глаза.
+- Второй сцене добавлена яркость (`eq` в ветке `[bfg]`): она снята темнее
+  первой, и на более широком кадре без этого стейк терялся. Коррекция
+  применяется только к самому кадру, заливка остаётся тёмной.
 - `scale=...:flags=lanczos` — масштабатор острее стандартного, заметно
   на мелких деталях вроде кристаллов соли.
 - Вертикальная версия кропа не требует и **не масштабируется вообще** —

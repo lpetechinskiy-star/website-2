@@ -877,10 +877,13 @@
   const heroVid = $('#hero-vid'), motionBtn = $('#hero-motion'), motionTxt = $('#hero-motion-t');
 
   if (heroVid && motionBtn) {
-    const saveData = !!(navigator.connection && navigator.connection.saveData);
+    // ролик весит около полутора мегабайт, поэтому не тянем его при экономии
+    // трафика и на заведомо медленной сети — постер там остаётся вместо него
+    const conn = navigator.connection || {};
+    const thin = !!conn.saveData || /^(slow-)?2g$/.test(conn.effectiveType || '');
     const source = matchMedia('(min-width: 56em)').matches
       ? heroVid.dataset.wide : heroVid.dataset.tall;
-    let wanted = !calm() && !saveData;      // чего хочет пользователь, а не что происходит
+    let wanted = !calm() && !thin;          // чего хочет пользователь, а не что происходит
 
     const setBtn = playing => {
       motionBtn.hidden = false;

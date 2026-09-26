@@ -325,17 +325,32 @@ p { text-wrap: pretty }
   padding-block: calc(var(--hdr-h) + var(--s6)) var(--s7);
   overflow: hidden;
 }
-.hero__bg {
-  position: absolute; inset: 0; z-index: -2;
+/* Съёмка идёт двумя кадрировками: широкой для десктопа и вертикальной
+   для телефона. Постер грузится сразу и остаётся LCP, видео встаёт
+   поверх него только когда действительно заиграло. */
+.hero__media { position: absolute; inset: 0; z-index: -2; overflow: hidden; will-change: transform }
+.hero__bg, .hero__vid {
+  position: absolute; inset: 0;
   width: 100%; height: 100%;
-  object-fit: cover; object-position: 50% 75%;
-  will-change: transform;
+  object-fit: cover; object-position: 50% 62%;
 }
+.hero__vid { opacity: 0; transition: opacity 700ms var(--e-out) }
+.hero__vid.is-on { opacity: 1 }
+
 .hero__veil {
   position: absolute; inset: 0; z-index: -1;
+  /* На телефоне текст ложится прямо на кадр, а мясо и соль — самые светлые
+     его участки. Затемнение усилено именно в зоне текста: замерено, что
+     иначе лид-абзац не добирает 4.5:1. Верхняя треть остаётся открытой. */
   background:
-    radial-gradient(120% 75% at 50% 100%, rgba(224, 85, 43, .18), transparent 62%),
-    linear-gradient(to bottom, rgba(12,10,9,.92) 0%, rgba(12,10,9,.34) 32%, rgba(12,10,9,.72) 78%, var(--ink) 100%);
+    radial-gradient(120% 70% at 50% 100%, rgba(224, 85, 43, .14), transparent 60%),
+    linear-gradient(to bottom,
+      rgba(12,10,9,.80) 0%,
+      rgba(12,10,9,.32) 20%,
+      rgba(12,10,9,.60) 40%,
+      rgba(12,10,9,.90) 58%,
+      rgba(12,10,9,.97) 76%,
+      var(--ink) 100%);
 }
 .hero__in {
   width: 100%; max-width: var(--wrap); margin-inline: auto;
@@ -355,7 +370,10 @@ p { text-wrap: pretty }
 }
 .hero__lead {
   max-width: 44ch;
-  font-size: var(--t-lead); color: var(--mute);
+  font-size: var(--t-lead);
+  /* поверх съёмки вторичный серый не добирает 4.5:1 ни при каком затемнении —
+     текст на фото идёт полной яркостью */
+  color: var(--bone);
 }
 .hero__cta { display: flex; flex-wrap: wrap; gap: var(--s3) }
 
@@ -367,7 +385,7 @@ p { text-wrap: pretty }
 }
 .hero__stats dt {
   font: 500 var(--t-xs)/1.3 var(--f-disp);
-  letter-spacing: .16em; text-transform: uppercase; color: var(--faint);
+  letter-spacing: .16em; text-transform: uppercase; color: var(--mute);
   margin-bottom: var(--s2);
 }
 .hero__stats dd { display: flex; align-items: baseline; gap: var(--s2) }
@@ -375,10 +393,28 @@ p { text-wrap: pretty }
   font: 600 clamp(1.5rem, 3.4vw, 2.5rem)/1 var(--f-disp);
   color: var(--brass); letter-spacing: -.01em;
 }
-.hero__stats span { font-size: var(--t-xs); color: var(--faint); text-transform: uppercase; letter-spacing: .1em }
+.hero__stats span { font-size: var(--t-xs); color: var(--mute); text-transform: uppercase; letter-spacing: .1em }
+
+.hero__tools {
+  position: absolute; inset-block-end: var(--s5); inset-inline-end: var(--gutter);
+  display: flex; align-items: center; gap: var(--s4);
+}
+.hero__motion {
+  display: grid; place-items: center; flex: 0 0 auto;
+  width: 2.75rem; height: 2.75rem;
+  border: 1px solid var(--line-soft);
+  background: rgba(12, 10, 9, .55);
+  color: var(--bone);
+  backdrop-filter: blur(6px);
+  transition: border-color var(--d-base) var(--e-out), color var(--d-base) var(--e-out),
+              background var(--d-base) var(--e-out);
+}
+.hero__motion:hover { border-color: var(--brass); color: var(--brass); background: rgba(12, 10, 9, .8) }
+.hero__motion .ic-pause, .hero__motion .ic-play { display: none }
+.hero__motion[data-state="playing"] .ic-pause { display: block }
+.hero__motion[data-state="paused"]  .ic-play  { display: block }
 
 .hero__scroll {
-  position: absolute; inset-block-end: var(--s5); inset-inline-end: var(--gutter);
   display: none; align-items: center; gap: var(--s2);
   font: 500 var(--t-xs)/1 var(--f-disp);
   letter-spacing: .18em; text-transform: uppercase; color: var(--faint);
@@ -388,6 +424,14 @@ p { text-wrap: pretty }
 .hero__scroll svg { animation: nudge 2.4s var(--e-in-out) infinite }
 @keyframes nudge { 0%,100% { transform: translateY(0) } 50% { transform: translateY(5px) } }
 @media (prefers-reduced-motion: reduce) { .hero__scroll svg { animation: none } }
+
+/* на низких экранах (iPhone SE и подобные) первый экран поджимается,
+   чтобы строка с цифрами не уезжала за фолд */
+@media (max-height: 43em) {
+  .hero { padding-block: calc(var(--hdr-h) + var(--s4)) var(--s5) }
+  .hero__stats { margin-top: 0; padding-top: var(--s3) }
+  .hero__lead { font-size: 1rem }
+}
 
 /* ── 8. TICKER ──────────────────────────────────────────────────────────── */
 .ticker {
@@ -1226,6 +1270,13 @@ p { text-wrap: pretty }
 
 @media (min-width: 56em) {          /* 900 — tablet / small laptop */
   :root { --hdr-h: 5.25rem }
+  /* текст живёт слева — притемняем именно эту сторону, а не весь кадр */
+  .hero__veil {
+    background:
+      radial-gradient(110% 70% at 50% 100%, rgba(224, 85, 43, .16), transparent 62%),
+      linear-gradient(to right, rgba(12,10,9,.95) 0%, rgba(12,10,9,.86) 32%, rgba(12,10,9,.32) 66%, rgba(12,10,9,.56) 100%),
+      linear-gradient(to bottom, rgba(12,10,9,.82) 0%, rgba(12,10,9,.44) 30%, rgba(12,10,9,.72) 74%, var(--ink) 100%);
+  }
   .nav { display: flex }
   .hdr__act .btn { display: inline-flex }
   .burger { display: none }

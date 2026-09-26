@@ -13,7 +13,9 @@
 <meta property="og:site_name" content="ЧУГУН">
 <meta property="og:title" content="ЧУГУН — стейк-хаус на Патриарших">
 <meta property="og:description" content="Сухое вызревание 28–45 дней. Открытый угольный гриль 400 °C. Трёхпрудный переулок, 11/13.">
-<meta property="og:image" content="assets/img/og-cover.svg">
+<meta property="og:image" content="assets/img/og-cover.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
@@ -122,7 +124,14 @@
 <main id="main">
 <!-- ════════════════════════════════════════════════ HERO ══════════ -->
 <section class="hero" id="top">
-  <img class="hero__bg" src="assets/img/hero-grill.svg" alt="" width="1920" height="1000" fetchpriority="high" decoding="async">
+  <div class="hero__media" aria-hidden="true">
+    <picture>
+      <source media="(min-width: 56em)" srcset="assets/img/hero-poster-wide.webp" width="1280" height="720">
+      <img class="hero__bg" src="assets/img/hero-poster-tall.webp" alt="" width="608" height="1080" fetchpriority="high" decoding="async">
+    </picture>
+    <video class="hero__vid" id="hero-vid" muted loop playsinline preload="none" tabindex="-1"
+           data-wide="assets/video/hero-wide.mp4" data-tall="assets/video/hero-tall.mp4"></video>
+  </div>
   <div class="hero__veil" aria-hidden="true"></div>
 
   <div class="hero__in">
@@ -149,10 +158,17 @@
     </dl>
   </div>
 
-  <a class="hero__scroll" href="#cuts">
-    <span>Листайте</span>
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v15m0 0-6-6m6 6 6-6"/></svg>
-  </a>
+  <div class="hero__tools">
+    <button class="hero__motion" id="hero-motion" type="button" hidden>
+      <svg class="ic-pause" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M9.5 5.5v13M14.5 5.5v13"/></svg>
+      <svg class="ic-play" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 5.2 19 12 8 18.8Z"/></svg>
+      <span class="vh" id="hero-motion-t">Остановить фоновое видео</span>
+    </button>
+    <a class="hero__scroll" href="#cuts">
+      <span>Листайте</span>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v15m0 0-6-6m6 6 6-6"/></svg>
+    </a>
+  </div>
 </section>
 
 <!-- ══════════════════════════════════════════════ TICKER ══════════ -->

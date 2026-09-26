@@ -51,8 +51,8 @@
       y: 0, duration: .95, ease: 'expo.out', stagger: .09, delay: .12
     });
 
-    // slow parallax drift on the hero plate — transform only, never layout
-    const heroBg = $('.hero__bg');
+    // slow parallax drift on the hero footage — transform only, never layout
+    const heroBg = $('.hero__media');
     if (heroBg) {
       gsap.to(heroBg, {
         yPercent: 12, ease: 'none',
@@ -863,7 +863,57 @@
     });
   });
 
-  /* ── 12. SMOOTH ANCHORS WITH REAL FOCUS MOVE ────────────────────────── */
+  /* ── 12. ФОНОВОЕ ВИДЕО ПЕРВОГО ЭКРАНА ───────────────────────────────
+     Постер отрисован сразу и остаётся LCP; видео подгружается отдельно
+     и проявляется, только когда реально пошло. Не грузим совсем при
+     prefers-reduced-motion и в режиме экономии трафика.
+     Движущийся контент, который стартует сам, по WCAG 2.2.2 обязан
+     иметь способ остановки — отсюда кнопка паузы, а не просто autoplay. */
+  const heroVid = $('#hero-vid'), motionBtn = $('#hero-motion'), motionTxt = $('#hero-motion-t');
+
+  if (heroVid && motionBtn) {
+    const saveData = !!(navigator.connection && navigator.connection.saveData);
+    const source = matchMedia('(min-width: 56em)').matches
+      ? heroVid.dataset.wide : heroVid.dataset.tall;
+    let wanted = !calm() && !saveData;      // чего хочет пользователь, а не что происходит
+
+    const setBtn = playing => {
+      motionBtn.hidden = false;
+      motionBtn.dataset.state = playing ? 'playing' : 'paused';
+      const label = playing ? 'Остановить фоновое видео' : 'Запустить фоновое видео';
+      motionBtn.setAttribute('aria-label', label);
+      motionTxt.textContent = label;
+    };
+
+    const start = () => {
+      if (!heroVid.getAttribute('src')) {
+        heroVid.setAttribute('src', source);
+        heroVid.load();
+      }
+      const p = heroVid.play();
+      if (p) p.catch(() => setBtn(false));   // автозапуск запрещён — остаётся постер
+    };
+
+    heroVid.addEventListener('playing', () => { heroVid.classList.add('is-on'); setBtn(true); });
+    heroVid.addEventListener('error', () => { motionBtn.hidden = true; });
+
+    motionBtn.addEventListener('click', () => {
+      if (heroVid.paused) { wanted = true; start(); }
+      else { wanted = false; heroVid.pause(); setBtn(false); }
+    });
+
+    // за пределами экрана видео крутить незачем — это батарея и процессор
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(([e]) => {
+        if (!wanted) return;
+        e.isIntersecting ? start() : heroVid.pause();
+      }, { threshold: .08 }).observe($('.hero'));
+    }
+
+    wanted ? start() : setBtn(false);
+  }
+
+  /* ── 13. SMOOTH ANCHORS WITH REAL FOCUS MOVE ────────────────────────── */
   $$('a[href^="#"]:not([href="#"]):not([data-book-open])').forEach(a => {
     a.addEventListener('click', e => {
       const t = document.getElementById(a.getAttribute('href').slice(1));

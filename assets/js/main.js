@@ -921,7 +921,145 @@
     wanted ? start() : setBtn(false);
   }
 
-  /* ── 13. SMOOTH ANCHORS WITH REAL FOCUS MOVE ────────────────────────── */
+  /* ── 13. ТЛЕЮЩИЕ УГОЛЬКИ ────────────────────────────────────────────
+     Частицы поднимаются снизу, покачиваются и мерцают. Свечение
+     отрисовано в спрайт один раз, поэтому на каждую частицу в кадре
+     приходится только drawImage, а не построение градиента.
+     При prefers-reduced-motion рисуется один статичный кадр: фактура
+     остаётся, движения нет. За пределами экрана цикл не крутится. */
+  const emberCanvases = $$('.embers');
+
+  if (emberCanvases.length && document.createElement('canvas').getContext) {
+    const rnd = (a, b) => a + Math.random() * (b - a);
+
+    const sprites = [[212, 160, 60], [224, 85, 43], [247, 201, 107]].map(([r, g, b]) => {
+      const S = 64, cv = document.createElement('canvas');
+      cv.width = cv.height = S;
+      const c = cv.getContext('2d');
+      const grad = c.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+      grad.addColorStop(0,    `rgba(${r},${g},${b},1)`);
+      grad.addColorStop(0.22, `rgba(${r},${g},${b},.55)`);
+      grad.addColorStop(0.55, `rgba(${r},${g},${b},.12)`);
+      grad.addColorStop(1,    `rgba(${r},${g},${b},0)`);
+      c.fillStyle = grad;
+      c.fillRect(0, 0, S, S);
+      return cv;
+    });
+
+    const makeField = cv => {
+      const ctx = cv.getContext('2d');
+      const f = { cv, ps: [], w: 0, h: 0, visible: false };
+
+      const spawn = (p, scattered) => {
+        p.x = rnd(-.05, 1.05) * f.w;
+        p.y = scattered ? rnd(0, 1) * f.h : f.h + rnd(8, 70);
+        p.r = rnd(1.3, 4.0);
+        p.vy = rnd(9, 30);                       // подъём, пикселей в секунду
+        p.sway = rnd(4, 16);                     // боковое покачивание
+        p.freq = rnd(.25, .8);
+        p.phase = rnd(0, Math.PI * 2);
+        p.max = rnd(6, 15);                      // время жизни
+        p.life = scattered ? rnd(0, p.max) : 0;
+        p.flick = rnd(1.6, 4.2);                 // частота мерцания
+        p.peak = rnd(.30, .78);                  // яркость в максимуме
+        p.sprite = sprites[(Math.random() * sprites.length) | 0];
+      };
+
+      f.resize = () => {
+        const r = cv.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        // мягким пятнам плотность экрана не нужна, а пикселей при dpr 2
+        // вчетверо больше — замерено, что кадр от этого дорожает вдвое
+        const dpr = 1;
+        f.w = r.width; f.h = r.height;
+        cv.width = Math.round(f.w * dpr);
+        cv.height = Math.round(f.h * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        // плотность от площади, но с потолком — на большом экране частиц
+        // не должно становиться втрое больше
+        const want = Math.max(18, Math.min(88, Math.round(f.w * f.h / 19000)));
+        while (f.ps.length < want) { const p = {}; spawn(p, true); f.ps.push(p); }
+        f.ps.length = want;
+      };
+
+      f.step = (dt, t) => {
+        for (const p of f.ps) {
+          p.life += dt;
+          p.y -= p.vy * dt;
+          p.x += Math.sin(p.phase + t * p.freq) * p.sway * dt;
+          if (p.life > p.max || p.y < -40) spawn(p, false);
+        }
+      };
+
+      f.draw = t => {
+        ctx.clearRect(0, 0, f.w, f.h);
+        ctx.globalCompositeOperation = 'lighter';
+        for (const p of f.ps) {
+          const k = p.life / p.max;
+          const fade = Math.min(1, k / .18) * Math.min(1, (1 - k) / .35);
+          const flicker = .72 + .28 * Math.sin(t * p.flick + p.phase);
+          const a = fade * flicker * p.peak;
+          if (a < .01) continue;
+          const d = p.r * 8;
+          ctx.globalAlpha = a;
+          ctx.drawImage(p.sprite, p.x - d / 2, p.y - d / 2, d, d);
+        }
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+      };
+
+      f.resize();
+      return f;
+    };
+
+    const fields = emberCanvases.map(makeField);
+
+    if (calm()) {
+      fields.forEach(f => f.draw(0));            // фактура без движения
+    } else {
+      const MIN_DT = 1 / 32;                       // движение медленное, 30 кадров хватает
+      let running = false, prev = 0, acc = 0;
+      const frame = now => {
+        if (!running) return;
+        const t = now / 1000;
+        const dt = Math.min(.05, prev ? t - prev : .016);
+        prev = t;
+        acc += dt;
+        if (acc >= MIN_DT) {
+          for (const f of fields) if (f.visible) { f.step(acc, t); f.draw(t); }
+          acc = 0;
+        }
+        requestAnimationFrame(frame);
+      };
+      const sync = () => {
+        const want = fields.some(f => f.visible);
+        if (want && !running) { running = true; prev = 0; acc = 0; requestAnimationFrame(frame); }
+        else if (!want) running = false;
+      };
+
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver(entries => {
+          entries.forEach(e => {
+            const f = fields.find(x => x.cv === e.target);
+            if (f) f.visible = e.isIntersecting;
+          });
+          sync();
+        }, { rootMargin: '140px' });
+        fields.forEach(f => io.observe(f.cv));
+      } else {
+        fields.forEach(f => { f.visible = true; });
+        sync();
+      }
+    }
+
+    let rzTimer;
+    addEventListener('resize', () => {
+      clearTimeout(rzTimer);
+      rzTimer = setTimeout(() => fields.forEach(f => { f.resize(); if (calm()) f.draw(0); }), 200);
+    }, { passive: true });
+  }
+
+  /* ── 14. SMOOTH ANCHORS WITH REAL FOCUS MOVE ────────────────────────── */
   $$('a[href^="#"]:not([href="#"]):not([data-book-open])').forEach(a => {
     a.addEventListener('click', e => {
       const t = document.getElementById(a.getAttribute('href').slice(1));

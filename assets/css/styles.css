@@ -490,6 +490,38 @@ p { text-wrap: pretty }
 }
 .sh__lead { font-size: var(--t-lead); color: var(--mute); max-width: 52ch }
 
+/* ── тлеющие угольки ────────────────────────────────────────────────────
+   Декоративный слой: частицы рисует канвас, он лежит за содержимым.
+   Без JavaScript остаётся только тёплое свечение снизу — секция от этого
+   не разваливается. Класс переиспользуемый: добавьте .sect--embers секции
+   и <canvas class="embers" aria-hidden="true"> первым её потомком. */
+.sect--embers { position: relative; overflow: hidden }
+.sect--embers::before {
+  content: ''; position: absolute; z-index: 0;
+  inset-inline: -10%; bottom: -18%; height: 46%;
+  background: radial-gradient(52% 100% at 50% 100%,
+              rgba(224, 85, 43, .16), rgba(212, 160, 60, .06) 44%, transparent 72%);
+  pointer-events: none;
+}
+/* Слои держим неотрицательными. С z-index: -1 внутри isolation: isolate
+   браузер уводит канвас на отдельный слой и растрирует его неустойчиво:
+   картинка в канвасе побайтово та же, а композит кадр от кадра плывёт. */
+.embers {
+  position: absolute; inset: 0; z-index: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+.sect--embers > .wrap { position: relative; z-index: 1 }
+/* На широких экранах текст стоит слева — там угольки приглушены: и запас
+   по контрасту, и композиция та же, что в первом экране. Замерено: без
+   этого лид упирался в 4.68:1 при норме 4.5. */
+@media (min-width: 56em) {
+  .embers {
+    -webkit-mask-image: linear-gradient(95deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,.45) 34%, #000 66%);
+    mask-image: linear-gradient(95deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,.45) 34%, #000 66%);
+  }
+}
+
 /* ── 10. SIGNATURE CUTS ─────────────────────────────────────────────────── */
 .cuts { display: grid; gap: var(--s4); grid-template-columns: 1fr }
 .cut__a {

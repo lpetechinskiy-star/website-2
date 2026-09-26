@@ -266,8 +266,10 @@
     const TODAY    = msk.iso;
     const HORIZON  = addDays(TODAY, 60);
     const FIRST_SLOT = 12;
-    const LAST_SLOT  = [21, 22, 22, 22, 22, 23, 23];       // вс, пн…сб
+    // будни до 22:00, выходные (сб, вс) до 23:00
+    const LAST_SLOT  = [23, 22, 22, 22, 22, 22, 23];       // вс, пн…сб
     const LEAD_MIN   = 60;                                  // бронь минимум за час
+    const MAX_SLOT   = Math.max(...LAST_SLOT);
 
     dateIn.min = TODAY;
     dateIn.max = HORIZON;
@@ -430,7 +432,10 @@
 
       timeNote.hidden = free > 0;
       if (!free) timeNote.textContent = 'На сегодня бронь уже закрыта — выберите другой день или позвоните нам.';
-      else if (dow(iso) === 0) { timeNote.hidden = false; timeNote.textContent = 'В воскресенье последняя посадка в 21:00.'; }
+      else if (last < MAX_SLOT) {
+        timeNote.hidden = false;
+        timeNote.textContent = `Последняя посадка в ${String(last).padStart(2, '0')}:00.`;
+      }
 
       if (hasGsap && !calm()) {
         gsap.fromTo(chips, { opacity: 0, y: 6 },
@@ -818,7 +823,7 @@
   const nowChip = $('#open-now'), nowText = $('#open-now-t');
   if (nowChip && nowText) {
     const OPEN = 12 * 60;                                   // открываемся в 12:00
-    const CLOSE = [23 * 60, 24 * 60, 24 * 60, 24 * 60, 24 * 60, 26 * 60, 26 * 60]; // вс…сб
+    const CLOSE = [24 * 60, 24 * 60, 24 * 60, 24 * 60, 24 * 60, 26 * 60, 26 * 60]; // вс…сб
     const hhmm = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 
     const paint = () => {

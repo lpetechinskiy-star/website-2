@@ -1112,7 +1112,219 @@
     }, { passive: true });
   }
 
-  /* ── 14. SMOOTH ANCHORS WITH REAL FOCUS MOVE ────────────────────────── */
+  /* ── 14. ТУСКЛЫЙ ОГОНЬ ЗА КУРСОРОМ ──────────────────────────────────
+     Второй декоративный слой, в секциях «Меню» и «Вино и бар».
+     За курсором тянется догорающий язык: тонкий, мутный, без чёткого
+     контура. Цепочка точек догоняет курсор с запаздыванием и сужается
+     к хвосту, от неё отрываются и всплывают клубы.
+
+     Холст не растянут на всю секцию, а размером с квадрат вокруг курсора
+     и ездит за ним через transform: секции высокие, и холст во всю
+     секцию — это полтора миллиона пикселей, которые браузер перерисовывает
+     в каждом кадре. Замерено на одинаковом прогоне мыши длиной 2,8 с
+     (главный поток, программная отрисовка): без слоя 0,14 с работы,
+     с холстом во всю секцию 0,46 с, с холстом вокруг курсора 0,30 с.
+     Чистка одного «грязного» прямоугольника и отрисовка в половинном
+     разрешении не дали ничего — дело в размере холста, а не в том,
+     сколько на нём нарисовано.
+
+     Слой живёт только во время движения мыши: когда жар догорел и клубы
+     погасли, цикл останавливается и кадр снова стоит ноль. Только для
+     мыши и только без prefers-reduced-motion — движение здесь и есть
+     весь эффект, статичного состояния у него нет. */
+  const wispCanvases = $$('.wisp');
+
+  if (wispCanvases.length && !calm() && matchMedia('(pointer: fine)').matches
+      && document.createElement('canvas').getContext) {
+    const rnd = (a, b) => a + Math.random() * (b - a);
+
+    // Спрайт нарочно размыт до самого края: у потухшего огня нет границы.
+    const puffSprite = ([r, g, b]) => {
+      const S = 96, cv = document.createElement('canvas');
+      cv.width = cv.height = S;
+      const c = cv.getContext('2d');
+      const grad = c.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+      grad.addColorStop(0,   `rgba(${r},${g},${b},.42)`);
+      grad.addColorStop(.30, `rgba(${r},${g},${b},.20)`);
+      grad.addColorStop(.62, `rgba(${r},${g},${b},.06)`);
+      grad.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+      c.fillStyle = grad;
+      c.fillRect(0, 0, S, S);
+      return cv;
+    };
+    const SPR = [[224, 85, 43], [212, 160, 60], [180, 96, 52]].map(puffSprite);
+
+    const TN = 14;              // звеньев в хвосте
+    const MAXP = 40;            // потолок по клубам
+    const BOX = 480;            // сторона холста вокруг курсора
+    const HALF = BOX / 2;
+
+    // Положение секции на экране кэшируем: getBoundingClientRect на каждом
+    // pointermove заставляет браузер пересчитывать раскладку.
+    let boxDirty = false;
+    addEventListener('scroll', () => { boxDirty = true; }, { passive: true });
+
+    const makeWisp = cv => {
+      const ctx = cv.getContext('2d');
+      const w = { cv, px: -1e4, py: -1e4, heat: 0, live: 0,
+                  left: 0, top: 0, tail: [], puffs: [], emit: 0 };
+      for (let i = 0; i < TN; i++) w.tail.push({ x: -1e4, y: -1e4 });
+
+      // Хвост живёт в координатах секции, холст — квадрат вокруг курсора.
+      // Всё, что уехало дальше половины стороны, гасит маска в CSS,
+      // поэтому обрезанного края не видно.
+      cv.width = cv.height = BOX;
+      cv.style.width = cv.style.height = BOX + 'px';
+
+      w.measure = () => { const r = cv.parentElement.getBoundingClientRect(); w.left = r.left; w.top = r.top; };
+
+      w.put = (x, y) => {
+        if (w.heat < .02) {                       // вошли заново — хвост не тянем через всю секцию
+          for (const t of w.tail) { t.x = x; t.y = y; }
+        }
+        w.px = x; w.py = y; w.heat = 1;
+      };
+
+      w.step = dt => {
+        // голова догоняет курсор, каждое следующее звено — предыдущее
+        const head = w.tail[0];
+        const kh = 1 - Math.exp(-dt * 16);
+        head.x += (w.px - head.x) * kh;
+        head.y += (w.py - head.y) * kh;
+        for (let i = 1; i < TN; i++) {
+          const a = w.tail[i], b = w.tail[i - 1];
+          const k = 1 - Math.exp(-dt * (15 - i * .55));
+          a.x += (b.x - a.x) * k;
+          a.y += (b.y - a.y) * k - 9 * dt * w.heat;   // хвост сносит вверх, как дым
+        }
+
+        // клубы отрываются от начала хвоста, пока есть жар
+        w.emit += dt * 20 * w.heat;
+        while (w.emit >= 1) {
+          w.emit -= 1;
+          if (w.puffs.length >= MAXP) break;
+          const t = w.tail[(rnd(1, 9)) | 0];
+          w.puffs.push({
+            x: t.x + rnd(-7, 7), y: t.y + rnd(-7, 7),
+            vy: rnd(14, 38), sway: rnd(-11, 11),
+            r0: rnd(16, 30), grow: rnd(26, 52),
+            life: 0, max: rnd(.7, 1.5),
+            a: rnd(.18, .40) * w.heat,
+            sprite: SPR[(Math.random() * SPR.length) | 0],
+          });
+        }
+
+        for (let i = w.puffs.length - 1; i >= 0; i--) {
+          const p = w.puffs[i];
+          p.life += dt;
+          p.y -= p.vy * dt;
+          p.x += p.sway * dt;
+          p.vy *= Math.exp(-dt * .8);
+          if (p.life >= p.max) w.puffs.splice(i, 1);
+        }
+
+        w.heat *= Math.exp(-dt * 3.2);
+        w.live = w.puffs.length + (w.heat > .01 ? 1 : 0);
+      };
+
+      w.draw = t => {
+        // холст едет за головой следа; координаты на нём — секционные
+        const ax = Math.round(w.tail[0].x) - HALF, ay = Math.round(w.tail[0].y) - HALF;
+        cv.style.transform = `translate3d(${ax}px,${ay}px,0)`;
+        ctx.setTransform(1, 0, 0, 1, -ax, -ay);
+        ctx.clearRect(ax, ay, BOX, BOX);
+        if (!w.live) return;
+        ctx.globalCompositeOperation = 'lighter';
+
+        for (const p of w.puffs) {
+          const k = p.life / p.max;
+          const a = p.a * Math.min(1, k / .15) * (1 - k) * (1 - k);
+          if (a < .004) continue;
+          const d = p.r0 + p.grow * k;             // расплывается по мере угасания
+          ctx.globalAlpha = a;
+          ctx.drawImage(p.sprite, p.x - d / 2, p.y - d / 2, d, d);
+        }
+
+        // Сам язык: к хвосту тоньше и тусклее. Рисуем не по звеньям, а
+        // сплошь вдоль них — иначе при быстром движении мыши от следа
+        // остаётся пунктир из отдельных пятен, а не огонь.
+        const at = i => {
+          const j = Math.min(TN - 1, i | 0), n = w.tail[j], m = w.tail[Math.min(TN - 1, j + 1)];
+          const u = i - j, k = i / (TN - 1);
+          // лёгкое боковое колебание — у живого пламени нет прямой линии
+          const wob = Math.sin(t * 3.1 + i * .9) * 4 * k;
+          return { x: n.x + (m.x - n.x) * u + wob, y: n.y + (m.y - n.y) * u,
+                   a: w.heat * .37 * (1 - k) * (1 - k * .55), d: 46 - 33 * k };
+        };
+        // Шаг вдоль следа — 9 px при спрайте в 46: пятна ещё перекрываются
+        // в сплошную полосу, а заливок в кадре вдвое меньше, чем при шаге 5.
+        let p1 = at(0);
+        for (let i = 0; i < TN - 1; i++) {
+          const p0 = p1; p1 = at(i + 1);
+          const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+          const n = Math.max(1, Math.min(8, Math.round(dist / 9)));
+          for (let s = 0; s < n; s++) {
+            const u = s / n, a = p0.a + (p1.a - p0.a) * u;
+            if (a < .004) continue;
+            const d = p0.d + (p1.d - p0.d) * u;
+            const x = p0.x + (p1.x - p0.x) * u, y = p0.y + (p1.y - p0.y) * u;
+            // шаг вдоль следа постоянный, поэтому и доля на один спрайт
+            // постоянная: делить ещё и на число шагов нельзя — при быстром
+            // движении голова следа гасла почти до нуля
+            ctx.globalAlpha = a * .44;
+            ctx.drawImage(u + i < TN * .4 ? SPR[0] : SPR[2], x - d / 2, y - d / 2, d, d);
+          }
+        }
+
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+      };
+
+      const host = cv.closest('.sect--wisp') || cv.parentElement;
+      host.addEventListener('pointermove', e => {
+        if (e.pointerType !== 'mouse') return;
+        if (boxDirty) { wisps.forEach(x => x.measure()); boxDirty = false; }
+        w.put(e.clientX - w.left, e.clientY - w.top);
+        wake();
+      }, { passive: true });
+      host.addEventListener('pointerleave', () => { w.heat = 0; }, { passive: true });
+
+      w.measure();
+      return w;
+    };
+
+    const wisps = wispCanvases.map(makeWisp);
+
+    // Пока мышь стоит и всё догорело — цикл не крутится вовсе.
+    const MIN_DT = 1 / 32;
+    let running = false, prev = 0, acc = 0;
+    const frame = now => {
+      const t = now / 1000;
+      const dt = Math.min(.05, prev ? t - prev : .016);
+      prev = t;
+      acc += dt;
+      if (acc >= MIN_DT) {
+        let live = 0;
+        for (const w of wisps) { w.step(acc); w.draw(t); live += w.live; }
+        acc = 0;
+        if (!live) { running = false; return; }
+      }
+      requestAnimationFrame(frame);
+    };
+    function wake() {
+      if (running) return;
+      running = true; prev = 0; acc = 0;
+      requestAnimationFrame(frame);
+    }
+
+    let wzTimer;
+    addEventListener('resize', () => {
+      clearTimeout(wzTimer);
+      wzTimer = setTimeout(() => { wisps.forEach(w => w.measure()); boxDirty = false; }, 200);
+    }, { passive: true });
+  }
+
+  /* ── 15. SMOOTH ANCHORS WITH REAL FOCUS MOVE ────────────────────────── */
   $$('a[href^="#"]:not([href="#"]):not([data-book-open])').forEach(a => {
     a.addEventListener('click', e => {
       const t = document.getElementById(a.getAttribute('href').slice(1));

@@ -522,6 +522,29 @@ p { text-wrap: pretty }
   }
 }
 
+/* ── тусклый огонь за курсором ──────────────────────────────────────────
+   Второй декоративный слой, для секций «Меню» и «Вино и бар». Живёт
+   только пока по секции ведут мышью: догорающий язык тянется за
+   курсором и расплывается. Без JavaScript, на тач-устройствах и при
+   prefers-reduced-motion канвас остаётся пустым — секция от этого
+   не меняется. Класс переиспользуемый: .sect--wisp на секцию и
+   <canvas class="wisp" aria-hidden="true"> первым её потомком.
+   Слои держим неотрицательными — причина та же, что у .embers. */
+.sect--wisp { position: relative; overflow: hidden }
+/* Холст не во всю секцию, а квадратом вокруг курсора: размер и сдвиг
+   задаёт скрипт. Маска гасит края, поэтому границы квадрата не видно
+   и хвост просто растворяется, не упираясь в обрез. */
+.wisp {
+  position: absolute; top: 0; left: 0; z-index: 0;
+  width: 0; height: 0;
+  pointer-events: none;
+  /* will-change: transform здесь не ставим — в замерах он не дал ничего,
+     а постоянный композиторский слой стоит памяти на каждой секции. */
+  -webkit-mask-image: radial-gradient(closest-side, #000 58%, rgba(0,0,0,.45) 82%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 58%, rgba(0,0,0,.45) 82%, transparent 100%);
+}
+.sect--wisp > .wrap { position: relative; z-index: 1 }
+
 /* ── 10. SIGNATURE CUTS ─────────────────────────────────────────────────── */
 .cuts { display: grid; gap: var(--s4); grid-template-columns: 1fr }
 .cut__a {

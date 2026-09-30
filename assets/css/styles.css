@@ -738,24 +738,58 @@ dialog:not([open]):target {
   .tabs__bar { -webkit-mask-image: none; mask-image: none }
 }
 .tabs__bar::-webkit-scrollbar { display: none }
-.tabs__bar [role="tab"] {
+/* Сами радиокнопки не видны, но остаются в фокусе — стрелки переключают
+   вкладки, как и положено группе радиокнопок. */
+.tabs { position: relative }
+.tabs__r {
+  position: absolute; top: 0; inset-inline-start: 0;
+  width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none;
+}
+.tabs__bar label {
   position: relative;
+  display: inline-flex; align-items: center;
   flex: 0 0 auto;
   scroll-snap-align: start;
   min-height: 2.75rem; padding: var(--s2) var(--s4);
   font: 500 var(--t-xs)/1 var(--f-disp);
   letter-spacing: .16em; text-transform: uppercase; color: var(--faint);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   transition: color var(--d-base) var(--e-out);
 }
-.tabs__bar [role="tab"]::after {
+.tabs__bar label::after {
   content: ''; position: absolute; inset-inline: var(--s3); bottom: calc(-1 * var(--s2) - 1px);
   height: 2px; background: var(--brass);
   transform: scaleX(0); transition: transform var(--d-base) var(--e-out);
 }
-.tabs__bar [role="tab"]:hover { color: var(--mute) }
-.tabs__bar [role="tab"][aria-selected="true"] { color: var(--bone) }
-.tabs__bar [role="tab"][aria-selected="true"]::after { transform: scaleX(1) }
-[role="tabpanel"]:focus-visible { outline-offset: 8px }
+.tabs__bar label:hover { color: var(--mute) }
+.tabs__panels > .tabs__p { display: none }
+
+#tab-steak:checked ~ .tabs__bar label[for="tab-steak"],
+#tab-fire:checked ~ .tabs__bar label[for="tab-fire"],
+#tab-start:checked ~ .tabs__bar label[for="tab-start"],
+#tab-side:checked ~ .tabs__bar label[for="tab-side"],
+#tab-dess:checked ~ .tabs__bar label[for="tab-dess"] { color: var(--bone) }
+
+#tab-steak:checked ~ .tabs__bar label[for="tab-steak"]::after,
+#tab-fire:checked ~ .tabs__bar label[for="tab-fire"]::after,
+#tab-start:checked ~ .tabs__bar label[for="tab-start"]::after,
+#tab-side:checked ~ .tabs__bar label[for="tab-side"]::after,
+#tab-dess:checked ~ .tabs__bar label[for="tab-dess"]::after { transform: scaleX(1) }
+
+#tab-steak:checked ~ .tabs__panels > #p-steak,
+#tab-fire:checked ~ .tabs__panels > #p-fire,
+#tab-start:checked ~ .tabs__panels > #p-start,
+#tab-side:checked ~ .tabs__panels > #p-side,
+#tab-dess:checked ~ .tabs__panels > #p-dess { display: block }
+
+#tab-steak:focus-visible ~ .tabs__bar label[for="tab-steak"],
+#tab-fire:focus-visible ~ .tabs__bar label[for="tab-fire"],
+#tab-start:focus-visible ~ .tabs__bar label[for="tab-start"],
+#tab-side:focus-visible ~ .tabs__bar label[for="tab-side"],
+#tab-dess:focus-visible ~ .tabs__bar label[for="tab-dess"] {
+  outline: 2px solid var(--brass); outline-offset: 4px;
+}
 
 .menu { display: grid; gap: var(--s2) }
 .menu li {
@@ -857,10 +891,14 @@ dialog:not([open]):target {
 .gal__i button:hover::after { opacity: .55 }
 .gal__cap {
   position: absolute; inset-inline: 0; bottom: 0; z-index: 1;
-  padding: var(--s4);
+  padding: var(--s6) var(--s4) var(--s4);
   font: 500 var(--t-xs)/1 var(--f-disp);
   letter-spacing: .16em; text-transform: uppercase; color: var(--bone);
   text-align: start;
+  /* Подпись лежит на снимке, и снимок бывает светлым: под ней собственное
+     затемнение. Замерено по пикселям — без него на телефоне подпись
+     упиралась в 3.96:1 на подсвеченной корочке при норме 4.5. */
+  background: linear-gradient(to top, rgba(12,10,9,.92) 40%, rgba(12,10,9,0) 100%);
 }
 
 /* lightbox */
@@ -1528,10 +1566,12 @@ dialog:not([open]):target {
   background: rgba(12, 10, 9, .94);
   border-top: 1px solid var(--line-soft);
   backdrop-filter: blur(14px);
-  transform: translateY(110%);
   transition: transform var(--d-slow) var(--e-out);
 }
-.cta-bar--on { transform: none }
+/* Без скрипта полоса просто есть: прятать её начальным сдвигом можно
+   только там, где есть кому её выдвинуть. Класс js ставит скрипт в <head>. */
+.js .cta-bar { transform: translateY(110%) }
+.js .cta-bar--on { transform: none }
 /* Полоса висит поверх страницы, и нижняя строка подвала уходила под неё.
    Отступ добавляем только там, где полоса вообще есть. */
 @media (max-width: 55.99em) {

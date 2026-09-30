@@ -265,16 +265,25 @@ b.textContent='Скрипт страницы не выполнился: '+e.mess
     </header>
 
     <div class="tabs">
-      <div class="tabs__bar" role="tablist" aria-label="Разделы меню">
-        <button role="tab" id="tab-steak" aria-controls="p-steak" aria-selected="true" tabindex="0">Стейки</button>
-        <button role="tab" id="tab-fire"  aria-controls="p-fire"  aria-selected="false" tabindex="-1">Из огня</button>
-        <button role="tab" id="tab-start" aria-controls="p-start" aria-selected="false" tabindex="-1">Закуски</button>
-        <button role="tab" id="tab-side"  aria-controls="p-side"  aria-selected="false" tabindex="-1">Гарниры</button>
-        <button role="tab" id="tab-dess"  aria-controls="p-dess"  aria-selected="false" tabindex="-1">Десерты</button>
+      <!-- Переключатель — группа радиокнопок, а не кнопки со скриптом:
+           так вкладки работают и там, где JavaScript не выполняется,
+           и стрелки на клавиатуре достаются даром. -->
+      <input class="tabs__r" type="radio" name="menu-tab" id="tab-steak" checked>
+      <input class="tabs__r" type="radio" name="menu-tab" id="tab-fire">
+      <input class="tabs__r" type="radio" name="menu-tab" id="tab-start">
+      <input class="tabs__r" type="radio" name="menu-tab" id="tab-side">
+      <input class="tabs__r" type="radio" name="menu-tab" id="tab-dess">
+
+      <div class="tabs__bar" role="group" aria-label="Разделы меню">
+        <label for="tab-steak">Стейки</label>
+        <label for="tab-fire">Из огня</label>
+        <label for="tab-start">Закуски</label>
+        <label for="tab-side">Гарниры</label>
+        <label for="tab-dess">Десерты</label>
       </div>
 
       <div class="tabs__panels">
-        <div role="tabpanel" id="p-steak" aria-labelledby="tab-steak" tabindex="0">
+        <div class="tabs__p" id="p-steak">
           <ul class="menu">
             <li><span class="menu__n">Ти-боун, 28 дней<em>700 г · вырезка и стриплойн на кости</em></span><span class="menu__d" aria-hidden="true"></span><span class="menu__p tnum">6 400 ₽</span></li>
             <li><span class="menu__n">Томагавк, 45 дней<em>1200 г · на двоих, режем в зале</em></span><span class="menu__d" aria-hidden="true"></span><span class="menu__p tnum">11 800 ₽</span></li>
@@ -285,7 +294,7 @@ b.textContent='Скрипт страницы не выполнился: '+e.mess
           </ul>
         </div>
 
-        <div role="tabpanel" id="p-fire" aria-labelledby="tab-fire" tabindex="0" hidden>
+        <div class="tabs__p" id="p-fire">
           <ul class="menu">
             <li><span class="menu__n">Костный мозг на углях<em>с петрушкой и бородинским тостом</em></span><span class="menu__d" aria-hidden="true"></span><span class="menu__p tnum">1 200 ₽</span></li>
             <li><span class="menu__n">Бараньи рёбра<em>6 часов в дыму яблони</em></span><span class="menu__d" aria-hidden="true"></span><span class="menu__p tnum">2 800 ₽</span></li>
@@ -295,7 +304,7 @@ b.textContent='Скрипт страницы не выполнился: '+e.mess
           </ul>
         </div>
 
-        <div role="tabpanel" id="p-start" aria-labelledby="tab-start" tabindex="0" hidden>
+        <div class="tabs__p" id="p-start">
           <ul class="menu">
             <li><span class="menu__n">Тартар из вырезки<em>рубим ножом, желток, каперсы</em></span><span class="menu__d" aria-hidden="true"></span><span class="menu__p tnum">1 600 ₽</span></li>
             <li><span class="menu__n">Брезаола домашняя<em>вызревание 60 дней</em></span><span class="menu__d" aria-hidden="true"></span><span class="menu__p tnum">1 400 ₽</span></li>
@@ -305,7 +314,7 @@ b.textContent='Скрипт страницы не выполнился: '+e.mess
           </ul>
         </div>
 
-        <div role="tabpanel" id="p-side" aria-labelledby="tab-side" tabindex="0" hidden>
+        <div class="tabs__p" id="p-side">
           <ul class="menu">
             <li><span class="menu__n">Картофель в углях<em>со сметаной и зелёным луком</em></span><span class="menu__d" aria-hidden="true"></span><span class="menu__p tnum">690 ₽</span></li>
             <li><span class="menu__n">Спаржа на решётке<em>лимон, пармезан</em></span><span class="menu__d" aria-hidden="true"></span><span class="menu__p tnum">890 ₽</span></li>
@@ -314,7 +323,7 @@ b.textContent='Скрипт страницы не выполнился: '+e.mess
           </ul>
         </div>
 
-        <div role="tabpanel" id="p-dess" aria-labelledby="tab-dess" tabindex="0" hidden>
+        <div class="tabs__p" id="p-dess">
           <ul class="menu">
             <li><span class="menu__n">Медовик на гречишном мёде<em>двенадцать коржей</em></span><span class="menu__d" aria-hidden="true"></span><span class="menu__p tnum">620 ₽</span></li>
             <li><span class="menu__n">Печёное яблоко с углей<em>мороженое на топлёном молоке</em></span><span class="menu__d" aria-hidden="true"></span><span class="menu__p tnum">580 ₽</span></li>

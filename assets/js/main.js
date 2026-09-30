@@ -143,36 +143,21 @@
     mnav.addEventListener('click', e => { if (e.target === mnav) close(); });
   }
 
-  /* ── 4. MENU TABS ───────────────────────────────────────────────────── */
-  const tabBar = $('.tabs__bar');
-  if (tabBar) {
-    const tabs = $$('[role="tab"]', tabBar);
-
-    const select = (tab, focus = true) => {
-      tabs.forEach(t => {
-        const on = t === tab;
-        t.setAttribute('aria-selected', String(on));
-        t.tabIndex = on ? 0 : -1;
-        $('#' + t.getAttribute('aria-controls')).hidden = !on;
-      });
-      if (focus) tab.focus();
-      if (!calm() && hasGsap) {
-        const panel = $('#' + tab.getAttribute('aria-controls'));
-        gsap.fromTo(panel.querySelectorAll('li'),
-          { opacity: 0, y: 10 },
-          { opacity: 1, y: 0, duration: .34, ease: 'power2.out', stagger: .035, overwrite: true });
-      }
-    };
-
-    tabs.forEach(tab => tab.addEventListener('click', () => select(tab)));
-    tabBar.addEventListener('keydown', e => {
-      const i = tabs.indexOf(document.activeElement);
-      if (i < 0) return;
-      const map = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 };
-      if (!(e.key in map)) return;
-      e.preventDefault();
-      select(tabs[(map[e.key] + tabs.length) % tabs.length]);
-    });
+  /* ── 4. MENU TABS ───────────────────────────────────────────────────
+     Переключение делают радиокнопки и CSS — без скрипта оно тоже работает.
+     Скрипту остаётся только оживить появление строк. */
+  const tabRadios = $$('.tabs__r');
+  if (tabRadios.length) {
+    tabRadios.forEach(r => r.addEventListener('change', () => {
+      if (calm() || !hasGsap || !r.checked) return;
+      const panel = $('.tabs__panels > .tabs__p:not([hidden])', r.closest('.tabs')) ||
+                    $$('.tabs__panels > .tabs__p', r.closest('.tabs'))
+                      .find(p => getComputedStyle(p).display !== 'none');
+      if (!panel) return;
+      gsap.fromTo(panel.querySelectorAll('li'),
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: .34, ease: 'power2.out', stagger: .035, overwrite: true });
+    }));
   }
 
   /* ── 5. LIGHTBOX ────────────────────────────────────────────────────── */

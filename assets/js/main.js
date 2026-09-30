@@ -902,11 +902,14 @@
   });
 
   /* ── 12. ФОНОВОЕ ВИДЕО ПЕРВОГО ЭКРАНА ───────────────────────────────
-     Постер отрисован сразу и остаётся LCP; видео подгружается отдельно
-     и проявляется, только когда реально пошло. Не грузим совсем при
-     prefers-reduced-motion и в режиме экономии трафика.
-     Движущийся контент, который стартует сам, по WCAG 2.2.2 обязан
-     иметь способ остановки — отсюда кнопка паузы, а не просто autoplay. */
+     Источник и автозапуск живут в разметке: <source media> выбирает
+     широкую или вертикальную версию и отсекает prefers-reduced-motion,
+     а autoplay muted playsinline заводит ролик. Так он идёт и там, где
+     скрипт не выполняется вовсе.
+     Скрипт добавляет к этому четыре вещи: кнопку остановки (движение,
+     которое стартует само, по WCAG 2.2.2 обязано иметь способ
+     остановки), плавное проявление по первому кадру, паузу за пределами
+     экрана и отказ от загрузки на медленной сети. */
   const heroVid = $('#hero-vid'), motionBtn = $('#hero-motion'), motionTxt = $('#hero-motion-t');
 
   if (heroVid && motionBtn) {
@@ -918,8 +921,13 @@
     const thin = !!conn.saveData
       || /^(slow-)?2g$|^3g$/.test(conn.effectiveType || '')
       || (typeof conn.downlink === 'number' && conn.downlink > 0 && conn.downlink < 1.6);
-    const source = matchMedia('(min-width: 56em)').matches
-      ? heroVid.dataset.wide : heroVid.dataset.tall;
+    // Какой <source> выбрала разметка — тем и пользуемся, не дублируя
+    // условия в двух местах.
+    const pickSource = () => {
+      const src = $$('source', heroVid)
+        .find(n => !n.media || matchMedia(n.media).matches);
+      return src ? src.getAttribute('src') : '';
+    };
     let wanted = !calm() && !thin;          // чего хочет пользователь, а не что происходит
 
     const setBtn = playing => {
@@ -946,20 +954,35 @@
       } catch (e) { return src; }
     };
 
+    // В однофайловой сборке источник приходит как data: URL — Safari такой
+    // не играет. Подменяем на blob: один раз, до первого запуска.
+    const swapDataUri = () => {
+      const src = pickSource();
+      if (!/^data:video/i.test(src)) return;
+      heroVid.setAttribute('src', playable(src));
+      heroVid.load();
+    };
+
     const start = () => {
-      if (!heroVid.getAttribute('src')) {
-        heroVid.setAttribute('src', playable(source));
-        heroVid.load();
-      }
       const p = heroVid.play();
       if (p) p.catch(() => setBtn(false));   // автозапуск запрещён — остаётся постер
+    };
+
+    // Медленная сеть или просьба без движения: снимаем источники, чтобы
+    // браузер не тянул мегабайт. Постер остаётся вместо ролика.
+    const drop = () => {
+      $$('source', heroVid).forEach(n => n.remove());
+      heroVid.removeAttribute('src');
+      heroVid.removeAttribute('autoplay');   // иначе элемент снова попросится играть
+      heroVid.load();
+      heroVid.pause();
     };
 
     heroVid.addEventListener('playing', () => { heroVid.classList.add('is-on'); setBtn(true); });
     heroVid.addEventListener('error', () => { motionBtn.hidden = true; });
 
     motionBtn.addEventListener('click', () => {
-      if (heroVid.paused) { wanted = true; start(); }
+      if (heroVid.paused) { wanted = true; swapDataUri(); start(); }
       else { wanted = false; heroVid.pause(); setBtn(false); }
     });
 
@@ -971,10 +994,15 @@
       }, { threshold: .08 }).observe($('.hero'));
     }
 
-    // Запрос за видео откладываем до простоя: на телефоне он иначе
-    // конкурирует со шрифтами и первой отрисовкой.
-    const kick = () => { wanted ? start() : setBtn(false); };
-    if (wanted && 'requestIdleCallback' in window) requestIdleCallback(kick, { timeout: 1500 });
+    const kick = () => {
+      if (!wanted) { drop(); setBtn(false); return; }
+      swapDataUri();
+      start();
+    };
+    // На медленной сети решаем сразу, чтобы успеть до загрузки; в остальном
+    // ждём простоя — на телефоне запрос иначе спорит со шрифтами.
+    if (!wanted) kick();
+    else if ('requestIdleCallback' in window) requestIdleCallback(kick, { timeout: 1500 });
     else kick();
   }
 

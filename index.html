@@ -136,8 +136,16 @@ b.textContent='Скрипт страницы не выполнился: '+e.mess
       <source media="(min-width: 56em)" srcset="assets/img/hero-poster-wide.webp" width="1280" height="720">
       <img class="hero__bg" src="assets/img/hero-poster-tall.webp" alt="" width="608" height="1080" fetchpriority="high" decoding="async">
     </picture>
-    <video class="hero__vid" id="hero-vid" muted loop playsinline preload="none" tabindex="-1"
-           data-wide="assets/video/hero-wide.mp4" data-tall="assets/video/hero-tall.mp4"></video>
+    <!-- Источник выбирает сама разметка: так ролик идёт и там, где скрипт
+         не выполняется. Условие prefers-reduced-motion стоит прямо в media —
+         если движение просить не велено, ни один <source> не подойдёт,
+         и видео не загрузится вовсе. -->
+    <video class="hero__vid" id="hero-vid" autoplay muted loop playsinline preload="metadata" tabindex="-1">
+      <source src="assets/video/hero-wide.mp4" type="video/mp4"
+              media="(min-width: 56em) and (prefers-reduced-motion: no-preference)">
+      <source src="assets/video/hero-tall.mp4" type="video/mp4"
+              media="(prefers-reduced-motion: no-preference)">
+    </video>
   </div>
   <div class="hero__veil" aria-hidden="true"></div>
 

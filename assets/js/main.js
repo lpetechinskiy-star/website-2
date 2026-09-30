@@ -84,12 +84,19 @@
   const mnav = $('#mnav'), burger = $('#burger');
   if (mnav && burger) {
     const open = () => {
-      mnav.showModal();
+      // showModal есть не везде и может бросить (диалог уже открыт, песочница
+      // без разрешений). Молча не открывшееся меню — худшее, что может быть
+      // на телефоне, поэтому запасной путь: открыть атрибутом.
+      try { mnav.showModal(); }
+      catch (e) { mnav.setAttribute('open', ''); mnav.classList.add('mnav--plain'); }
       burger.setAttribute('aria-expanded', 'true');
       document.body.style.overflow = 'hidden';
     };
     const close = () => {
-      mnav.close();
+      if (mnav.open) { try { mnav.close(); } catch (e) { mnav.removeAttribute('open'); } }
+      mnav.classList.remove('mnav--plain');
+      burger.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
     };
     burger.addEventListener('click', () => mnav.open ? close() : open());
     mnav.addEventListener('close', () => {
@@ -820,15 +827,16 @@
      Считаем по московскому времени, а не по часам гостя: иначе человек
      из Берлина увидит «закрыто», когда в зале полный сервис. Плашка
      появляется только здесь — без скрипта остаётся статичное расписание. */
-  const nowChip = $('#open-now'), nowText = $('#open-now-t');
-  if (nowChip && nowText) {
+  // плашек две — в контактах и в подвале, считаем один раз на обе
+  const nowChips = $$('[data-open-now]');
+  if (nowChips.length) {
     const OPEN = 12 * 60;                                   // открываемся в 12:00
     const CLOSE = [23 * 60, 22 * 60, 22 * 60, 22 * 60, 22 * 60, 23 * 60, 23 * 60]; // вс…сб
     const hhmm = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 
     const paint = () => {
       let day, min;
-      try { ({ day, min } = moscowNow()); } catch { nowChip.hidden = true; return; }
+      try { ({ day, min } = moscowNow()); } catch { nowChips.forEach(c => { c.hidden = true; }); return; }
       const prev = (day + 6) % 7;
       let open = false, until = 0;
 
@@ -838,11 +846,14 @@
         open = true; until = CLOSE[prev] - 24 * 60;          // ночь пятницы и субботы
       }
 
-      nowChip.dataset.state = open ? 'open' : 'closed';
-      nowText.textContent = open
+      const label = open
         ? `Сейчас открыто · до ${hhmm(until)}`
         : (min < OPEN ? 'Закрыто · откроемся в 12:00' : 'Закрыто · завтра с 12:00');
-      nowChip.hidden = false;
+      nowChips.forEach(chip => {
+        chip.dataset.state = open ? 'open' : 'closed';
+        $('[data-open-now-text]', chip).textContent = label;
+        chip.hidden = false;
+      });
     };
 
     paint();
@@ -897,9 +908,25 @@
       motionTxt.textContent = label;
     };
 
+    // Safari (и особенно iOS) не проигрывает медиа из data: URL — ему нужны
+    // диапазонные запросы, а у data: их нет. В однофайловой сборке ролик
+    // приходит именно так, поэтому переводим его в blob: — он диапазоны
+    // поддерживает, и видео начинает играть на айфоне.
+    const playable = src => {
+      if (!/^data:video/i.test(src) || typeof URL.createObjectURL !== 'function') return src;
+      try {
+        const comma = src.indexOf(',');
+        const type = src.slice(5, src.indexOf(';')) || 'video/mp4';
+        const bin = atob(src.slice(comma + 1));
+        const buf = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+        return URL.createObjectURL(new Blob([buf], { type }));
+      } catch (e) { return src; }
+    };
+
     const start = () => {
       if (!heroVid.getAttribute('src')) {
-        heroVid.setAttribute('src', source);
+        heroVid.setAttribute('src', playable(source));
         heroVid.load();
       }
       const p = heroVid.play();

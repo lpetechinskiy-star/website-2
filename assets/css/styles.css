@@ -315,6 +315,13 @@ p { text-wrap: pretty }
 }
 
 .logo { display: flex; align-items: center; gap: var(--s3); flex: 0 0 auto; padding-block: var(--s2) }
+/* На 320 px логотип с бургером не оставляли места под поле: подпись
+   набрана в разрядку, и она же первой отдаёт миллиметры. */
+@media (max-width: 23em) {
+  .hdr__in { gap: var(--s3) }
+  .logo__sub { letter-spacing: .07em }
+  .logo__name { letter-spacing: .22em }
+}
 .logo__mark { color: var(--brass); transition: transform var(--d-slow) var(--e-out) }
 .logo:hover .logo__mark { transform: rotate(-8deg) scale(1.06) }
 .logo__txt { display: flex; flex-direction: column; gap: 2px }
@@ -346,8 +353,12 @@ p { text-wrap: pretty }
 .nav a:hover, .nav a[aria-current="true"] { color: var(--bone) }
 .nav a:hover::after, .nav a[aria-current="true"]::after { transform: scaleX(1) }
 
+/* Свободное место в шапке достаётся правому краю. Сбрасывать этот отступ
+   в пользу .nav можно только там, где .nav видна: селектор по соседству
+   срабатывает и на скрытой навигации, и на телефоне бургер из-за этого
+   оставался висеть сразу за логотипом, в 76 px от правого края. */
 .hdr__act { display: flex; align-items: center; gap: var(--s4); margin-inline-start: auto }
-.nav ~ .hdr__act { margin-inline-start: 0 }
+@media (min-width: 56em) { .nav ~ .hdr__act { margin-inline-start: 0 } }
 .hdr__tel {
   display: none; align-items: center; gap: var(--s2);
   font: 500 var(--t-sm)/1 var(--f-body);
@@ -380,6 +391,9 @@ p { text-wrap: pretty }
   overflow: auto; overscroll-behavior: contain;
 }
 .mnav::backdrop { background: rgba(12, 10, 9, .9) }
+/* запасной путь, если showModal недоступен: dialog[open] без модальности */
+.mnav--plain { position: fixed; inset: 0; z-index: var(--z-modal); max-width: none; max-height: none }
+
 .mnav__in {
   display: flex; flex-direction: column; min-height: 100dvh;
   padding: calc(var(--s5) + env(safe-area-inset-top)) var(--gutter)
@@ -548,28 +562,6 @@ p { text-wrap: pretty }
   .hero__h { margin-block: var(--s1) var(--s2) }
 }
 
-/* ── 8. TICKER ──────────────────────────────────────────────────────────── */
-.ticker {
-  border-block: 1px solid var(--line-soft);
-  background: var(--coal);
-  overflow: hidden;
-  padding-block: var(--s3);
-}
-.ticker__row {
-  display: flex; align-items: center; gap: var(--s5);
-  width: max-content;
-  animation: slide 38s linear infinite;
-  font: 500 var(--t-xs)/1 var(--f-disp);
-  letter-spacing: .26em; text-transform: uppercase; color: var(--faint);
-  white-space: nowrap;
-}
-.ticker__row i { color: var(--brass); font-style: normal; font-size: .5rem }
-.ticker:hover .ticker__row { animation-play-state: paused }
-@keyframes slide { to { transform: translateX(-50%) } }
-@media (prefers-reduced-motion: reduce) {
-  .ticker__row { animation: none; width: 100%; justify-content: center; flex-wrap: wrap; white-space: normal }
-}
-
 /* ── 9. SECTION SHELL ───────────────────────────────────────────────────── */
 .sect { padding-block: clamp(var(--s8), 11vw, var(--s10)) }
 .sect--alt { background: var(--coal); border-block: 1px solid var(--line-soft) }
@@ -654,7 +646,10 @@ p { text-wrap: pretty }
 }
 .cut__a::after {
   content: ''; position: absolute; inset: 0; z-index: -1;
-  background: linear-gradient(to top, rgba(12,10,9,.96) 8%, rgba(12,10,9,.55) 46%, rgba(12,10,9,.15) 100%);
+  /* Верх приоткрыли: под плитами-заглушками градиент можно было держать
+     плотным, под настоящей съёмкой он съедал само блюдо. Низ оставили
+     тяжёлым — там лежит подпись, и её контраст замеряется. */
+  background: linear-gradient(to top, rgba(12,10,9,.9) 18%, rgba(12,10,9,.34) 58%, rgba(12,10,9,.04) 100%);
   transition: opacity var(--d-slow) var(--e-out);
 }
 .cut__a:hover .cut__bg { transform: scale(1.06); filter: brightness(1.22) saturate(1.1) }
@@ -676,6 +671,13 @@ p { text-wrap: pretty }
   position: absolute; inset-inline: 0; bottom: 0;
   display: grid; gap: var(--s2);
   padding: var(--s5);
+  /* Затемнение привязано к самой подписи, а не к карточке: иначе, чтобы
+     вытянуть контраст названия, приходится гасить весь снимок, и от блюда
+     ничего не остаётся. Замерено по пикселям: без этого латинское имя
+     упиралось в 3.3:1 на светлых крупинках соли при норме 4.5. */
+  background: linear-gradient(to top,
+              rgba(12,10,9,.96) 55%, rgba(12,10,9,.86) 78%, rgba(12,10,9,0) 100%);
+  padding-top: var(--s8);
 }
 .cut__name {
   font: 600 clamp(1.4rem, 3.2vw, 1.9rem)/1 var(--f-disp);
@@ -1331,7 +1333,11 @@ p { text-wrap: pretty }
 
 /* ── плашки времени и залов ───────────────────────────────────────────── */
 .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(4.75rem, 1fr)); gap: var(--s2) }
-.chips--wrap { grid-template-columns: 1fr }
+/* Раньше эти группы шли в одну колонку на любом экране: на телефоне
+   пять поводов занимали пять полных строк и выдавливали остальную форму
+   за экран. Теперь фишки идут потоком по содержимому и переносятся. */
+.chips--wrap { display: flex; flex-wrap: wrap; gap: var(--s2) }
+.chips--wrap .chip { flex: 0 1 auto }
 .chip {
   min-height: 2.75rem; padding: var(--s2) var(--s3);
   border: 1px solid var(--line-soft);
@@ -1399,9 +1405,42 @@ p { text-wrap: pretty }
   background: var(--coal);
   padding-block: var(--s8) 0;
 }
-.ft__in { display: grid; gap: var(--s7); padding-bottom: var(--s8) }
+.ft__in { display: grid; gap: var(--s7); padding-bottom: var(--s6) }
 .ft__brand .logo__name { font-size: 1.5rem; display: block; margin-bottom: var(--s3) }
-.ft__brand p { font-size: var(--t-sm); color: var(--faint) }
+.ft__brand { display: grid; gap: var(--s4); align-content: start }
+.ft__brand p { font-size: var(--t-sm); color: var(--faint); margin: 0 }
+.ft__now { justify-self: start }
+
+/* Ссылки на соцсети и почту — то, чем левая колонка подвала занята вместо
+   трёхсот пикселей пустоты, которые там были. */
+.ft__soc { display: flex; flex-wrap: wrap; gap: var(--s2) }
+.ft__soc a {
+  display: inline-flex; align-items: center; gap: var(--s2);
+  min-height: 2.75rem; padding-inline: var(--s4);
+  border: 1px solid var(--line-soft); color: var(--mute);
+  font: 500 var(--t-xs)/1 var(--f-disp);
+  letter-spacing: .14em; text-transform: uppercase;
+  transition: border-color var(--d-base) var(--e-out), color var(--d-base) var(--e-out),
+              background var(--d-base) var(--e-out);
+}
+.ft__soc a:hover { border-color: var(--brass); color: var(--brass); background: rgba(212,160,60,.08) }
+
+/* Имя во всю ширину контуром: подвал заканчивается знаком, а не пустотой.
+   Обрезаем по нижнему краю — буквы уходят в срез, как вывеска в темноту. */
+.ft__mark {
+  overflow: hidden;
+  margin-top: var(--s2);
+  padding-inline: var(--gutter);
+  max-height: .62em;
+  font: 700 clamp(4rem, 17.5vw, 15rem)/.8 var(--f-disp);
+  letter-spacing: .06em; text-transform: uppercase; text-align: center;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(212, 160, 60, .30);
+  user-select: none;
+}
+@supports not ((-webkit-text-stroke: 1px red)) {
+  .ft__mark { color: rgba(212, 160, 60, .16) }
+}
 .ft h2 {
   font: 500 var(--t-xs)/1 var(--f-disp);
   letter-spacing: .2em; text-transform: uppercase; color: var(--brass);
@@ -1519,7 +1558,7 @@ p { text-wrap: pretty }
 }
 
 @media print {
-  .hdr, .mnav, .cta-bar, .grain, .ticker, .hero__scroll, .lb { display: none !important }
+  .hdr, .mnav, .cta-bar, .grain, .hero__scroll, .lb { display: none !important }
   body { background: #fff; color: #000 }
   .sect { padding-block: 1.5rem; break-inside: avoid }
   .cut__bg, .duo__bg, .ev__bg, .res__bg, .hero__bg { display: none }

@@ -30,6 +30,21 @@ def data_uri(rel):
     mime = MIME.get(ext) or mimetypes.guess_type(path)[0] or 'application/octet-stream'
     return 'data:%s;base64,%s' % (mime, base64.b64encode(raw).decode('ascii')), len(raw)
 
+def lite(rel):
+    """Для одного файла берём облегчённые ролики, если они есть.
+
+    В base64 видео раздувается на треть, и полные версии давали файл
+    на 4 МБ — его обрезают просмотрщики, и страница выглядит сломанной,
+    хотя сломан не сайт, а показ. Облегчённые — 480 и 854 px по ширине,
+    25 кадров, crf 33: вместе 0,6 МБ вместо 2,3. На сайте с отдельной
+    папкой assets/ по-прежнему играют полные.
+    """
+    if rel.startswith('assets/video/') and rel.endswith('.mp4') and '-lite' not in rel:
+        alt = rel[:-4] + '-lite.mp4'
+        if os.path.exists(os.path.join(ROOT, alt)):
+            return alt
+    return rel
+
 def read(rel):
     with io.open(os.path.join(ROOT, rel), encoding='utf-8') as f:
         return f.read()
@@ -69,6 +84,7 @@ def main():
         pre, rel, post = m.group(1), m.group(2), m.group(3)
         if rel in SKIP:
             return m.group(0)
+        rel = lite(rel)
         uri, n = data_uri(rel)
         used[rel] = n
         return pre + uri + post
@@ -86,10 +102,31 @@ def main():
     html, n = re.subn(r'<script src="([^"]+)" defer></script>', inline_script, html)
     assert n == 3, 'ожидалось три подключаемых скрипта, найдено %d' % n
 
+    # ── 4. Метка целостности. Хвост файла — самое уязвимое место: если его
+    # обрежет почтовик или встроенный просмотрщик, страница выглядит
+    # сломанной, хотя не открылась целиком. Пусть скажет об этом прямо.
+    guard = ('<script>addEventListener("DOMContentLoaded",function(){setTimeout(function(){'
+             'if(window.__chugunTail)return;var d=document.createElement("div");'
+             'd.setAttribute("role","alert");d.style.cssText="position:fixed;inset:auto 0 0;'
+             'z-index:99999;padding:14px 18px;background:#D4A03C;color:#0C0A09;'
+             'font:600 14px/1.45 system-ui,sans-serif;text-align:center";'
+             'd.textContent="\u0424\u0430\u0439\u043b \u043e\u0442\u043a\u0440\u044b\u0442 '
+             '\u043d\u0435 \u0446\u0435\u043b\u0438\u043a\u043e\u043c \u2014 '
+             '\u043f\u0440\u043e\u0441\u043c\u043e\u0442\u0440\u0449\u0438\u043a '
+             '\u0435\u0433\u043e \u043e\u0431\u0440\u0435\u0437\u0430\u043b. '
+             '\u0421\u043a\u0430\u0447\u0430\u0439\u0442\u0435 chugun.html '
+             '\u0438 \u043e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 '
+             '\u0432 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0435.";'
+             'document.body.appendChild(d)},3000)})</script>')
+    html = html.replace('</head>', guard + '\n</head>', 1)
+    html = html.replace('</body>', '<script>window.__chugunTail=1</script>\n</body>', 1)
+
     with io.open(OUT, 'w', encoding='utf-8') as f:
         f.write(html)
 
     size = os.path.getsize(OUT)
+    # Порог не из головы: на 4 МБ встроенный просмотрщик обрезал файл молча
+    assert size < 2 * 1048576, 'файл вырос до %.1f МБ — его начнут обрезать' % (size / 1048576)
     print('chugun.html — %.2f МБ' % (size / 1048576))
     print('вшито файлов: %d, исходных байт %.0f КБ' % (len(used), sum(used.values()) / 1024))
     left = sorted(set(re.findall(r'"(assets/[^"]+)"', html)) - SKIP)

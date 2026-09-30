@@ -27,6 +27,14 @@
 <link rel="stylesheet" href="assets/css/styles.css">
 
 <script>(function(d){d.classList.add('js');window.__rvFailsafe=setTimeout(function(){d.classList.add('rv-fallback')},2500)})(document.documentElement)</script>
+<!-- Если скрипт страницы упадёт, страница скажет об этом сама, а не будет
+     молча выглядеть недоделанной: без этого причину видно только в консоли,
+     до которой на телефоне не добраться. -->
+<script>addEventListener('error',function(e){if(!e.message)return;var b=document.getElementById('jserr');
+if(!b){b=document.createElement('div');b.id='jserr';b.setAttribute('role','alert');
+b.style.cssText='position:fixed;inset:auto 0 0;z-index:99998;padding:10px 14px;background:#7A3418;color:#F5F1EA;font:500 12px/1.45 system-ui,sans-serif;text-align:center';
+(document.body||document.documentElement).appendChild(b)}
+b.textContent='Скрипт страницы не выполнился: '+e.message+' ('+(e.filename||'').split('/').pop()+':'+e.lineno+')'})</script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -89,20 +97,20 @@
         <span>+7 495 120-84-16</span>
       </a>
       <a class="btn btn--sm" href="#reserve"><span class="btn__t">Забронировать</span></a>
-      <button class="burger" type="button" id="burger" aria-expanded="false" aria-controls="mnav">
+      <a class="burger" id="burger" href="#mnav" role="button" aria-expanded="false" aria-controls="mnav">
         <span class="burger__box" aria-hidden="true"><i></i><i></i><i></i></span>
         <span class="vh">Открыть меню</span>
-      </button>
+      </a>
     </div>
   </div>
 </header>
 
 <dialog class="mnav" id="mnav" aria-label="Меню навигации">
   <div class="mnav__in">
-    <button class="mnav__x" type="button" data-close-mnav>
+    <a class="mnav__x" href="#top" data-close-mnav>
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
       <span class="vh">Закрыть меню</span>
-    </button>
+    </a>
     <nav class="mnav__list" aria-label="Разделы сайта">
       <a href="#cuts"><em>01</em>Отрубы</a>
       <a href="#menu"><em>02</em>Меню</a>

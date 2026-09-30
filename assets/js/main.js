@@ -125,7 +125,9 @@
       document.body.style.overflow = 'hidden';
     };
     const close = () => closeDlg(mnav);
-    burger.addEventListener('click', () => dlgOpen(mnav) ? close() : open());
+    // Разметкой бургер — ссылка на #mnav: без скрипта меню открывается
+    // правилом :target. Со скриптом переход отменяем и открываем окно сами.
+    burger.addEventListener('click', e => { e.preventDefault(); dlgOpen(mnav) ? close() : open(); });
     mnav.addEventListener('close', () => {
       burger.setAttribute('aria-expanded', 'false');
       document.body.style.overflow = '';
@@ -133,7 +135,10 @@
     });
     // в немодальном режиме подложки нет — закрываем по клику вне панели
     $$('[data-close-mnav], .mnav__list a, .mnav__foot a[href^="#"]', mnav)
-      .forEach(el => el.addEventListener('click', close));
+      .forEach(el => el.addEventListener('click', e => {
+        if (el.hasAttribute('data-close-mnav')) e.preventDefault();
+        close();
+      }));
     // click on the backdrop area closes too
     mnav.addEventListener('click', e => { if (e.target === mnav) close(); });
   }

@@ -406,6 +406,13 @@ p { text-wrap: pretty }
   overflow: auto; overscroll-behavior: contain;
 }
 .mnav::backdrop { background: rgba(12, 10, 9, .9) }
+/* Без скрипта бургер — обычная ссылка на #mnav, и меню открывается этим
+   правилом. Со скриптом переход отменяется, и работает showModal(). */
+dialog:not([open]):target {
+  display: block;
+  position: fixed; inset: 0; z-index: var(--z-modal);
+  max-width: none; max-height: none;
+}
 
 .mnav__in {
   display: flex; flex-direction: column; min-height: 100dvh;
@@ -1290,7 +1297,37 @@ p { text-wrap: pretty }
   letter-spacing: .18em; text-transform: uppercase; color: var(--mute);
 }
 .fld__hint { font-size: var(--t-xs); color: var(--faint); line-height: 1.5 }
+/* Системные поля — это не «черновик под скриптом», а то, что видит
+   человек, у которого скрипт не выполнился (например, предпросмотр
+   файла на айфоне его не запускает). Одеваем их в те же стили. */
 .native { display: grid; gap: var(--s2) }
+/* Подпись у поля дублирует .fld__lbl — прячем её от глаз, но оставляем
+   разметке: это настоящий <label for>, и он нужен озвучке. */
+.native label {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+}
+.native input, .native select {
+  width: 100%; min-height: 3rem;
+  padding: var(--s3) var(--s4);
+  background: rgba(22, 19, 15, .8);
+  border: 1px solid var(--ash); border-radius: var(--r);
+  color: var(--bone); font: 400 1rem/1.2 var(--f-body);
+  appearance: none; -webkit-appearance: none;
+}
+.native select {
+  background-image: linear-gradient(45deg, transparent 50%, var(--mute) 50%),
+                    linear-gradient(135deg, var(--mute) 50%, transparent 50%);
+  background-position: calc(100% - 20px) calc(50% + 1px), calc(100% - 14px) calc(50% + 1px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-inline-end: var(--s8);
+}
+.native input:focus, .native select:focus { border-color: var(--brass); outline: none }
+/* у date на iOS свой внутренний вид — снимаем белую подложку */
+.native input[type="date"]::-webkit-date-and-time-value { text-align: start }
+.native input::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .5 }
 /* свои виджеты внутри сетки шага 2 занимают всю ширину */
 .grid > .fld { grid-column: 1 / -1 }
 

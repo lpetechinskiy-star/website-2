@@ -543,6 +543,13 @@ p { text-wrap: pretty }
   overflow: auto; overscroll-behavior: contain;
 }
 .mnav::backdrop { background: rgba(12, 10, 9, .9) }
+/* Без скрипта бургер — обычная ссылка на #mnav, и меню открывается этим
+   правилом. Со скриптом переход отменяется, и работает showModal(). */
+dialog:not([open]):target {
+  display: block;
+  position: fixed; inset: 0; z-index: var(--z-modal);
+  max-width: none; max-height: none;
+}
 
 .mnav__in {
   display: flex; flex-direction: column; min-height: 100dvh;
@@ -1427,7 +1434,37 @@ p { text-wrap: pretty }
   letter-spacing: .18em; text-transform: uppercase; color: var(--mute);
 }
 .fld__hint { font-size: var(--t-xs); color: var(--faint); line-height: 1.5 }
+/* Системные поля — это не «черновик под скриптом», а то, что видит
+   человек, у которого скрипт не выполнился (например, предпросмотр
+   файла на айфоне его не запускает). Одеваем их в те же стили. */
 .native { display: grid; gap: var(--s2) }
+/* Подпись у поля дублирует .fld__lbl — прячем её от глаз, но оставляем
+   разметке: это настоящий <label for>, и он нужен озвучке. */
+.native label {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+}
+.native input, .native select {
+  width: 100%; min-height: 3rem;
+  padding: var(--s3) var(--s4);
+  background: rgba(22, 19, 15, .8);
+  border: 1px solid var(--ash); border-radius: var(--r);
+  color: var(--bone); font: 400 1rem/1.2 var(--f-body);
+  appearance: none; -webkit-appearance: none;
+}
+.native select {
+  background-image: linear-gradient(45deg, transparent 50%, var(--mute) 50%),
+                    linear-gradient(135deg, var(--mute) 50%, transparent 50%);
+  background-position: calc(100% - 20px) calc(50% + 1px), calc(100% - 14px) calc(50% + 1px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-inline-end: var(--s8);
+}
+.native input:focus, .native select:focus { border-color: var(--brass); outline: none }
+/* у date на iOS свой внутренний вид — снимаем белую подложку */
+.native input[type="date"]::-webkit-date-and-time-value { text-align: start }
+.native input::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .5 }
 /* свои виджеты внутри сетки шага 2 занимают всю ширину */
 .grid > .fld { grid-column: 1 / -1 }
 
@@ -1716,6 +1753,14 @@ p { text-wrap: pretty }
 </style>
 
 <script>(function(d){d.classList.add('js');window.__rvFailsafe=setTimeout(function(){d.classList.add('rv-fallback')},2500)})(document.documentElement)</script>
+<!-- Если скрипт страницы упадёт, страница скажет об этом сама, а не будет
+     молча выглядеть недоделанной: без этого причину видно только в консоли,
+     до которой на телефоне не добраться. -->
+<script>addEventListener('error',function(e){if(!e.message)return;var b=document.getElementById('jserr');
+if(!b){b=document.createElement('div');b.id='jserr';b.setAttribute('role','alert');
+b.style.cssText='position:fixed;inset:auto 0 0;z-index:99998;padding:10px 14px;background:#7A3418;color:#F5F1EA;font:500 12px/1.45 system-ui,sans-serif;text-align:center';
+(document.body||document.documentElement).appendChild(b)}
+b.textContent='Скрипт страницы не выполнился: '+e.message+' ('+(e.filename||'').split('/').pop()+':'+e.lineno+')'})</script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -1779,20 +1824,20 @@ p { text-wrap: pretty }
         <span>+7 495 120-84-16</span>
       </a>
       <a class="btn btn--sm" href="#reserve"><span class="btn__t">Забронировать</span></a>
-      <button class="burger" type="button" id="burger" aria-expanded="false" aria-controls="mnav">
+      <a class="burger" id="burger" href="#mnav" role="button" aria-expanded="false" aria-controls="mnav">
         <span class="burger__box" aria-hidden="true"><i></i><i></i><i></i></span>
         <span class="vh">Открыть меню</span>
-      </button>
+      </a>
     </div>
   </div>
 </header>
 
 <dialog class="mnav" id="mnav" aria-label="Меню навигации">
   <div class="mnav__in">
-    <button class="mnav__x" type="button" data-close-mnav>
+    <a class="mnav__x" href="#top" data-close-mnav>
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
       <span class="vh">Закрыть меню</span>
-    </button>
+    </a>
     <nav class="mnav__list" aria-label="Разделы сайта">
       <a href="#cuts"><em>01</em>Отрубы</a>
       <a href="#menu"><em>02</em>Меню</a>
@@ -2661,7 +2706,9 @@ p { text-wrap: pretty }
       document.body.style.overflow = 'hidden';
     };
     const close = () => closeDlg(mnav);
-    burger.addEventListener('click', () => dlgOpen(mnav) ? close() : open());
+    // Разметкой бургер — ссылка на #mnav: без скрипта меню открывается
+    // правилом :target. Со скриптом переход отменяем и открываем окно сами.
+    burger.addEventListener('click', e => { e.preventDefault(); dlgOpen(mnav) ? close() : open(); });
     mnav.addEventListener('close', () => {
       burger.setAttribute('aria-expanded', 'false');
       document.body.style.overflow = '';
@@ -2669,7 +2716,10 @@ p { text-wrap: pretty }
     });
     // в немодальном режиме подложки нет — закрываем по клику вне панели
     $$('[data-close-mnav], .mnav__list a, .mnav__foot a[href^="#"]', mnav)
-      .forEach(el => el.addEventListener('click', close));
+      .forEach(el => el.addEventListener('click', e => {
+        if (el.hasAttribute('data-close-mnav')) e.preventDefault();
+        close();
+      }));
     // click on the backdrop area closes too
     mnav.addEventListener('click', e => { if (e.target === mnav) close(); });
   }

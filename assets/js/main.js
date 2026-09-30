@@ -12,6 +12,42 @@
   const motionQ = matchMedia('(prefers-reduced-motion: reduce)');
   const calm    = () => motionQ.matches;
 
+  /* ── МОДАЛЬНЫЕ ОКНА ──────────────────────────────────────────────────
+     showModal() подводит в двух случаях, и оба выглядят одинаково —
+     кнопка нажимается, и ничего не происходит:
+       • <iframe> в песочнице без allow-modals: браузер молча игнорирует
+         вызов, исключения не бросает;
+       • старый браузер без <dialog> вовсе — метода просто нет.
+     Поэтому после вызова проверяем, открылось ли на самом деле, и если
+     нет — открываем атрибутом и возвращаем окну модальный вид классом
+     .dlg--plain (::backdrop в этом режиме не рисуется). Esc там тоже
+     сам не работает, вешаем вручную. */
+  const dlgOpen = d => d.open === true || d.hasAttribute('open');
+
+  const openDlg = d => {
+    if (dlgOpen(d)) return;
+    try { if (typeof d.showModal === 'function') d.showModal(); } catch (e) { /* нет так нет */ }
+    if (!dlgOpen(d)) {
+      d.setAttribute('open', '');
+      d.classList.add('dlg--plain');
+      d.__esc = e => { if (e.key === 'Escape') { e.preventDefault(); closeDlg(d); } };
+      document.addEventListener('keydown', d.__esc);
+    }
+  };
+
+  const closeDlg = d => {
+    if (!dlgOpen(d)) return;
+    if (d.classList.contains('dlg--plain')) {
+      document.removeEventListener('keydown', d.__esc);
+      d.__esc = null;
+      d.removeAttribute('open');
+      d.classList.remove('dlg--plain');
+      d.dispatchEvent(new Event('close'));      // в немодальном режиме оно не приходит само
+    } else {
+      try { d.close(); } catch (e) { d.removeAttribute('open'); }
+    }
+  };
+
   /* ── 1. REVEALS ─────────────────────────────────────────────────────────
      The head script hides .rv and arms a 2.5s failsafe. We either take over
      with GSAP or release everything immediately. */
@@ -84,26 +120,18 @@
   const mnav = $('#mnav'), burger = $('#burger');
   if (mnav && burger) {
     const open = () => {
-      // showModal есть не везде и может бросить (диалог уже открыт, песочница
-      // без разрешений). Молча не открывшееся меню — худшее, что может быть
-      // на телефоне, поэтому запасной путь: открыть атрибутом.
-      try { mnav.showModal(); }
-      catch (e) { mnav.setAttribute('open', ''); mnav.classList.add('mnav--plain'); }
+      openDlg(mnav);
       burger.setAttribute('aria-expanded', 'true');
       document.body.style.overflow = 'hidden';
     };
-    const close = () => {
-      if (mnav.open) { try { mnav.close(); } catch (e) { mnav.removeAttribute('open'); } }
-      mnav.classList.remove('mnav--plain');
-      burger.setAttribute('aria-expanded', 'false');
-      document.body.style.overflow = '';
-    };
-    burger.addEventListener('click', () => mnav.open ? close() : open());
+    const close = () => closeDlg(mnav);
+    burger.addEventListener('click', () => dlgOpen(mnav) ? close() : open());
     mnav.addEventListener('close', () => {
       burger.setAttribute('aria-expanded', 'false');
       document.body.style.overflow = '';
       burger.focus({ preventScroll: true });
     });
+    // в немодальном режиме подложки нет — закрываем по клику вне панели
     $$('[data-close-mnav], .mnav__list a, .mnav__foot a[href^="#"]', mnav)
       .forEach(el => el.addEventListener('click', close));
     // click on the backdrop area closes too
@@ -163,11 +191,11 @@
     const step = d => { idx = (idx + d + shots.length) % shots.length; paint(); };
 
     shots.forEach((s, i) => s.btn.addEventListener('click', () => {
-      idx = i; opener = s.btn; paint(); lb.showModal();
+      idx = i; opener = s.btn; paint(); openDlg(lb);
     }));
     $$('[data-lb-step]', lb).forEach(b => b.addEventListener('click', () => step(+b.dataset.lbStep)));
-    $('[data-lb-close]', lb).addEventListener('click', () => lb.close());
-    lb.addEventListener('click', e => { if (e.target === lb) lb.close(); });
+    $('[data-lb-close]', lb).addEventListener('click', () => closeDlg(lb));
+    lb.addEventListener('click', e => { if (e.target === lb) closeDlg(lb); });
     lb.addEventListener('keydown', e => {
       if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
       if (e.key === 'ArrowLeft')  { e.preventDefault(); step(-1); }
@@ -772,7 +800,11 @@
     /* ---- включаем свои виджеты и переносим форму в модальное окно ------- */
     const dlg = $('#book'), bookBody = $('#book-body'), host = $('#res-host'), cta = $('#res-cta');
 
-    if (dlg && bookBody && typeof dlg.showModal === 'function') {
+    // Раньше окно брони включалось только при нативной поддержке <dialog>;
+    // где её нет, форма оставалась внизу страницы, и «Забронировать»
+    // просто уводило прокруткой. Теперь окно открывается везде — запасной
+    // путь в openDlg делает его модальным вручную.
+    if (dlg && bookBody) {
       form.classList.add('upgraded');
       cal.hidden = false; timesBox.hidden = false; cnt.hidden = false;
       zonesBox.hidden = false; occsBox.hidden = false;
@@ -789,7 +821,7 @@
       const openBook = (zone, trigger) => {
         opener = trigger || null;
         if (zone) pickZone(zone);
-        dlg.showModal();
+        openDlg(dlg);
         document.body.style.overflow = 'hidden';
         if (hasGsap && !calm()) {
           const narrow = innerWidth < 700;
@@ -808,8 +840,8 @@
         openBook(t.dataset.zone, t);
       });
 
-      $$('[data-book-close]', dlg).forEach(b => b.addEventListener('click', () => dlg.close()));
-      dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+      $$('[data-book-close]', dlg).forEach(b => b.addEventListener('click', () => closeDlg(dlg)));
+      dlg.addEventListener('click', e => { if (e.target === dlg) closeDlg(dlg); });
       dlg.addEventListener('close', () => {
         document.body.style.overflow = '';
         if (opener && document.contains(opener)) opener.focus({ preventScroll: true });

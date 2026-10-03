@@ -656,25 +656,28 @@ dialog:not([open]):target {
 
 /* ── 10. SIGNATURE CUTS ─────────────────────────────────────────────────── */
 .cuts { display: grid; gap: var(--s4); grid-template-columns: 1fr }
+/* Подпись лежит под снимком, а не поверх него. Пока на карточках стояли
+   процедурные плиты, текст поверх был уместен — на них нечего было
+   разглядывать. На настоящей съёмке он закрывал само мясо: оно в центре
+   кадра, а нижнюю половину карточки занимает название с ценой. */
 .cut__a {
   position: relative; isolation: isolate;
-  display: block; height: 100%;
-  aspect-ratio: 4 / 5;
+  display: grid; grid-template-rows: auto 1fr; height: 100%;
   border: 1px solid var(--line-soft);
+  background: var(--coal);
   overflow: hidden;
 }
+.cut__ph { position: relative; display: block; aspect-ratio: 4 / 5; overflow: hidden }
 .cut__bg {
-  position: absolute; inset: 0; z-index: -2;
+  position: absolute; inset: 0;
   width: 100%; height: 100%; object-fit: cover;
   transition: transform 900ms var(--e-out), filter var(--d-slow) var(--e-out);
 }
-.cut__a::after {
-  content: ''; position: absolute; inset: 0; z-index: -1;
-  /* Верх приоткрыли: под плитами-заглушками градиент можно было держать
-     плотным, под настоящей съёмкой он съедал само блюдо. Низ оставили
-     тяжёлым — там лежит подпись, и её контраст замеряется. */
-  background: linear-gradient(to top, rgba(12,10,9,.9) 18%, rgba(12,10,9,.34) 58%, rgba(12,10,9,.04) 100%);
-  transition: opacity var(--d-slow) var(--e-out);
+/* мягкий стык снимка с подписью, чтобы край не резал кадр линейкой */
+.cut__ph::after {
+  content: ''; position: absolute; inset-inline: 0; bottom: 0; height: 28%;
+  background: linear-gradient(to top, var(--coal), rgba(22, 19, 15, 0));
+  pointer-events: none;
 }
 .cut__a:hover .cut__bg { transform: scale(1.06); filter: brightness(1.22) saturate(1.1) }
 .cut__num {
@@ -692,16 +695,8 @@ dialog:not([open]):target {
   letter-spacing: .14em; text-transform: uppercase;
 }
 .cut__body {
-  position: absolute; inset-inline: 0; bottom: 0;
-  display: grid; gap: var(--s2);
+  display: grid; align-content: start; gap: var(--s2);
   padding: var(--s5);
-  /* Затемнение привязано к самой подписи, а не к карточке: иначе, чтобы
-     вытянуть контраст названия, приходится гасить весь снимок, и от блюда
-     ничего не остаётся. Замерено по пикселям: без этого латинское имя
-     упиралось в 3.3:1 на светлых крупинках соли при норме 4.5. */
-  background: linear-gradient(to top,
-              rgba(12,10,9,.96) 55%, rgba(12,10,9,.86) 78%, rgba(12,10,9,0) 100%);
-  padding-top: var(--s8);
 }
 .cut__name {
   font: 600 clamp(1.4rem, 3.2vw, 1.9rem)/1 var(--f-disp);

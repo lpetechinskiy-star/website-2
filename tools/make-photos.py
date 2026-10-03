@@ -38,7 +38,7 @@ SHOTS = [
     ('gallery-03',     7.95, (720, 480,   0, 600, 720)),   # разрез
     ('gallery-04',     4.40, (520, 650,  60, 600, 720)),   # мрамор макро
     ('gallery-05',     0.60, (720, 480,   0, 700, 720)),   # доска и мясо
-    ('story-fire',     2.30, (600, 800, 120, 140, 720)),   # руки шефа над отрубом
+    ('gallery-06',     5.60, (576, 720,  72, 400, 720)),   # нож входит, вертикально
 ]
 
 def shot(name, t, box):
@@ -56,25 +56,28 @@ def shot(name, t, box):
 # Исходники небольшие (около 410 px), поэтому тянем умеренно и добавляем
 # резкости, а не раздуваем до размера сетки.
 PHOTOS = [
-    # исходник, имя, центр кадра по X и Y (доли), ширина на выходе
+    # исходник, имя, центр кадра по X и Y (доли), ширина на выходе,
+    # отношение сторон (по умолчанию 4:5 — под карточку отруба)
     ('tbone.jpg',     'dish-tbone',     0.50, 0.50, 560),
     ('tomahawk.jpg',  'dish-tomahawk',  0.46, 0.50, 560),
     ('ribeye.jpg',    'dish-ribeye',    0.50, 0.50, 560),
     ('striploin.jpg', 'dish-striploin', 0.50, 0.52, 560),
-    ('cocktail.jpg',  'gallery-06',     0.50, 0.38, 720),
+    ('cocktail.jpg',  'story-fire',     0.50, 0.42, 720, (3, 4)),
 ]
 
 PGRADE = 'eq=contrast=1.05:saturation=0.98,unsharp=5:5:0.6'
 
-def photo(src, name, cx, cy, outw):
+def photo(src, name, cx, cy, outw, ratio=(4, 5)):
     dst = os.path.join(OUT, name + '.webp')
-    # Ровно 4:5: берём наибольший вписанный прямоугольник этого отношения
+    # Ровно заданное отношение: берём наибольший вписанный прямоугольник
     # и двигаем его внутри кадра долями cx и cy.
     # запятые внутри min() экранируем: без этого ffmpeg принимает их
     # за разделители фильтров и ругается на «нет такого фильтра»
-    cw, ch = r"min(iw\,ih*4/5)", r"min(ih\,iw*5/4)"
+    rw, rh = ratio
+    cw = r"min(iw\,ih*%d/%d)" % (rw, rh)
+    ch = r"min(ih\,iw*%d/%d)" % (rh, rw)
     vf = ("crop=%s:%s:(iw-%s)*%g:(ih-%s)*%g,scale=%d:%d:flags=lanczos,%s"
-          % (cw, ch, cw, cx, ch, cy, outw, round(outw * 5 / 4), PGRADE))
+          % (cw, ch, cw, cx, ch, cy, outw, round(outw * rh / rw), PGRADE))
     subprocess.run([FF, '-v', 'error', '-y', '-i', os.path.join(SRCDIR, src),
                     '-frames:v', '1', '-vf', vf, '-q:v', '74', dst], check=True)
     return dst, os.path.getsize(dst)
@@ -85,10 +88,10 @@ def main():
         dst, n = shot(name, t, box)
         total += n
         print('%-16s %4.2f с  %5.0f КБ' % (name + '.webp', t, n / 1024))
-    for src, name, cx, cy, outw in PHOTOS:
-        dst, n = photo(src, name, cx, cy, outw)
+    for item in PHOTOS:
+        dst, n = photo(*item)
         total += n
-        print('%-16s %-14s %5.0f КБ' % (name + '.webp', src, n / 1024))
+        print('%-16s %-14s %5.0f КБ' % (item[1] + '.webp', item[0], n / 1024))
     print('итого %.0f КБ' % (total / 1024))
 
 if __name__ == '__main__':

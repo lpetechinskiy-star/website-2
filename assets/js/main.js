@@ -160,6 +160,18 @@
     }));
   }
 
+  /* ── 4b. ДОКУМЕНТЫ ──────────────────────────────────────────────────
+     Политика и правила. Без скрипта их открывает :target по ссылке
+     из подвала; со скриптом перехватываем переход, чтобы не трогать
+     адресную строку и не терять место на странице. */
+  $$('.doc').forEach(doc => {
+    $$('a[href="#' + doc.id + '"]').forEach(link =>
+      link.addEventListener('click', e => { e.preventDefault(); openDlg(doc); }));
+    $$('[data-doc-close]', doc).forEach(x =>
+      x.addEventListener('click', e => { e.preventDefault(); closeDlg(doc); }));
+    doc.addEventListener('click', e => { if (e.target === doc) closeDlg(doc); });
+  });
+
   /* ── 5. LIGHTBOX ────────────────────────────────────────────────────── */
   const lb = $('#lb');
   if (lb) {

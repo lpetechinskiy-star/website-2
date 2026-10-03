@@ -1465,6 +1465,14 @@ dialog:not([open]):target {
 .book__body {
   overflow-y: auto; overscroll-behavior: contain;
   padding: var(--s5) var(--s5) calc(var(--s7) + env(safe-area-inset-bottom));
+  /* Прокручиваемая часть обрезала строки ровно по линии прогресса —
+     выглядело так, будто текст налезает на шапку. Теперь у краёв он
+     растворяется, а не обрубается. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--s4),
+                      #000 calc(100% - var(--s4)), transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 var(--s4),
+                      #000 calc(100% - var(--s4)), transparent 100%);
+  scroll-padding-block: var(--s4);
 }
 
 /* ── шаги ─────────────────────────────────────────────────────────────── */
@@ -1698,6 +1706,62 @@ dialog:not([open]):target {
 .ft__btm a, .form__alt a, .evs__note a, .done__note a { padding-block: .45rem }
 .ft__btm a { transition: color var(--d-base) var(--e-out) }
 .ft__btm a:hover { color: var(--brass) }
+
+/* ── документы: политика и правила ──────────────────────────────────────
+   Та же механика, что у меню: ссылка в подвале ведёт на #privacy или
+   #rules, и без скрипта окно разворачивает правило dialog:target. */
+.doc {
+  width: min(100%, 46rem); max-width: none;
+  max-height: 100dvh; height: 100dvh;
+  margin: 0 0 0 auto; padding: 0;
+  border: 0; border-inline-start: 1px solid var(--line-soft);
+  background: var(--ink); color: var(--bone);
+  overflow: hidden;
+}
+.doc::backdrop { background: rgba(6, 5, 4, .86); backdrop-filter: blur(7px) }
+.doc__in { display: grid; grid-template-rows: auto 1fr; height: 100dvh }
+.doc__hd {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s4);
+  padding: calc(var(--s5) + env(safe-area-inset-top)) var(--s5) var(--s4);
+  border-bottom: 1px solid var(--line-soft);
+}
+.doc__ttl { display: grid; gap: var(--s2) }
+.doc__hd h2 {
+  font: 600 clamp(1.5rem, 4vw, 2.1rem)/1.05 var(--f-disp);
+  text-transform: uppercase; letter-spacing: -.01em;
+}
+.doc__x {
+  display: grid; place-items: center;
+  width: 2.75rem; height: 2.75rem; flex: 0 0 auto;
+  border: 1px solid var(--ash); color: var(--bone);
+  transition: border-color var(--d-base) var(--e-out), color var(--d-base) var(--e-out);
+}
+.doc__x:hover { border-color: var(--brass); color: var(--brass) }
+.doc__body {
+  overflow-y: auto; overscroll-behavior: contain;
+  display: grid; gap: var(--s4);
+  padding: var(--s5) var(--s5) calc(var(--s8) + env(safe-area-inset-bottom));
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--s4),
+                      #000 calc(100% - var(--s4)), transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 var(--s4),
+                      #000 calc(100% - var(--s4)), transparent 100%);
+}
+.doc__body p { color: var(--mute); font-size: var(--t-sm); line-height: 1.7; max-width: 62ch }
+.doc__body .doc__lead { color: var(--bone); font-size: var(--t-lead) }
+.doc__body h3 {
+  margin-top: var(--s4);
+  font: 500 var(--t-xs)/1 var(--f-disp);
+  letter-spacing: .18em; text-transform: uppercase; color: var(--brass);
+}
+.doc__body ul { display: grid; gap: var(--s2); padding-inline-start: var(--s5); max-width: 62ch }
+.doc__body li { color: var(--mute); font-size: var(--t-sm); line-height: 1.6 }
+.doc__body li::marker { color: var(--faint) }
+.doc__body a { color: var(--brass); text-decoration: underline; text-underline-offset: 3px }
+.doc__body .doc__note {
+  margin-top: var(--s4); padding: var(--s4);
+  border: 1px solid var(--line-soft);
+  color: var(--faint); font-size: var(--t-xs); line-height: 1.6;
+}
 
 /* ── 19. STICKY MOBILE CTA ──────────────────────────────────────────────── */
 .cta-bar {
@@ -2603,9 +2667,112 @@ b.textContent='Скрипт страницы не выполнился: '+e.mess
 
   <div class="wrap ft__btm">
     <p>© 2014–2025 ЧУГУН</p>
-    <p><a href="#">Политика обработки данных</a> · <a href="#">Правила бронирования</a></p>
+    <p><a href="#privacy">Политика обработки данных</a> · <a href="#rules">Правила бронирования</a></p>
   </div>
 </footer>
+
+<!-- ═══════════════════════════════════════════ ДОКУМЕНТЫ ══════════ -->
+<!-- Ссылки в подвале ведут сюда. Открываются и без скрипта: якорь
+     попадает в :target, и окно разворачивается правилом в CSS. -->
+<dialog class="doc" id="privacy" aria-labelledby="privacy-h">
+  <article class="doc__in">
+    <header class="doc__hd">
+      <div class="doc__ttl">
+        <p class="kicker"><span>Документы</span></p>
+        <h2 id="privacy-h">Политика обработки данных</h2>
+      </div>
+      <a class="doc__x" href="#top" data-doc-close><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><span class="vh">Закрыть</span></a>
+    </header>
+    <div class="doc__body">
+      <p class="doc__lead">Коротко: мы спрашиваем имя и телефон только затем, чтобы перезвонить
+        и подтвердить бронь. Больше ни для чего эти данные не используются.</p>
+
+      <h3>Кто обрабатывает</h3>
+      <p>Ресторан «ЧУГУН», Москва, Трёхпрудный переулок, 11/13. Вопросы по данным —
+        на <a href="mailto:hello@chugun.moscow">hello@chugun.moscow</a> или
+        по телефону <a href="tel:+74951208416">+7 495 120-84-16</a>.</p>
+
+      <h3>Что мы собираем</h3>
+      <ul>
+        <li>имя — чтобы знать, к кому обращаться;</li>
+        <li>телефон — чтобы перезвонить и подтвердить бронь;</li>
+        <li>дату, время, число гостей и выбранный зал;</li>
+        <li>пожелания, если вы их написали, — например, про аллергию или детский стул.</li>
+      </ul>
+
+      <h3>Зачем</h3>
+      <p>Только чтобы подтвердить бронь, подготовить стол и связаться с вами, если
+        что-то изменится. Мы не рассылаем рекламу и не передаём данные третьим лицам —
+        их видят менеджер зала и администратор, больше никто.</p>
+
+      <h3>На каком основании</h3>
+      <p>На основании вашего согласия: это та галочка под формой. Без неё заявка
+        не отправляется, потому что иначе мы не имеем права вам звонить.</p>
+
+      <h3>Сколько храним</h3>
+      <p>Девяносто дней после визита — чтобы помнить ваши предпочтения, если вы
+        вернётесь. Потом удаляем. Отозвать согласие можно в любой момент: позвоните
+        или напишите, и мы удалим запись в тот же день.</p>
+
+      <h3>Куки и счётчики</h3>
+      <p>Сайт не ставит куки и не подключает счётчики аналитики. Карта в разделе
+        «Как найти» подгружается с сервера Яндекса только после того, как вы нажмёте
+        «Показать карту», — до этого никаких запросов на сторону не уходит.</p>
+
+      <p class="doc__note">Это типовой текст для ресторана с вымышленными реквизитами.
+        Перед публикацией покажите его юристу и подставьте настоящие данные
+        организации.</p>
+    </div>
+  </article>
+</dialog>
+
+<dialog class="doc" id="rules" aria-labelledby="rules-h">
+  <article class="doc__in">
+    <header class="doc__hd">
+      <div class="doc__ttl">
+        <p class="kicker"><span>Документы</span></p>
+        <h2 id="rules-h">Правила бронирования</h2>
+      </div>
+      <a class="doc__x" href="#top" data-doc-close><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><span class="vh">Закрыть</span></a>
+    </header>
+    <div class="doc__body">
+      <p class="doc__lead">Бронь — это обещание в обе стороны: мы держим стол, вы приходите
+        вовремя. Всё остальное — детали, и вот они.</p>
+
+      <h3>Подтверждение</h3>
+      <p>Заявка с сайта — ещё не бронь. Мы перезваниваем в течение пятнадцати минут
+        в рабочее время и подтверждаем стол голосом. Если заявка пришла ночью,
+        позвоним на следующий день после полудня.</p>
+
+      <h3>Сколько держим стол</h3>
+      <p>Двадцать минут после назначенного часа. Опаздываете — позвоните, и мы
+        придержим дольше. Если связи нет, через двадцать минут стол уходит в зал,
+        но мы постараемся посадить вас за стойку.</p>
+
+      <h3>Изменение и отмена</h3>
+      <p>Поменять время, число гостей или отменить бронь можно звонком не позднее
+        чем за два часа до визита. Это бесплатно и без объяснений — просто позвоните.</p>
+
+      <h3>Компании от одиннадцати человек</h3>
+      <p>Такие брони идут через раздел «События»: там кабинет, винный погреб
+        и выкуп зала, у каждого свой депозит и сет-меню. Депозит возвращается
+        в счёт заказа, а при отмене позднее чем за сутки — удерживается.</p>
+
+      <h3>Дети, аллергии, особые просьбы</h3>
+      <p>Детский стул, место подальше от бара, непереносимость орехов — напишите
+        в поле «Пожелания» при бронировании. Кухня учитывает их заранее, в зале
+        это сделать уже сложнее.</p>
+
+      <h3>Чего мы не делаем</h3>
+      <p>Не берём предоплату за обычный стол, не ограничиваем время за столом
+        и не просим освободить место «через полтора часа». Пришли — сидите сколько
+        хочется, кухня работает до закрытия.</p>
+
+      <p class="doc__note">Правила вымышленного ресторана: даты, телефоны и суммы
+        в них условны и заменяются на ваши.</p>
+    </div>
+  </article>
+</dialog>
 
 <div class="cta-bar" id="ctabar" aria-hidden="true">
   <a class="cta-bar__tel" href="tel:+74951208416">
@@ -2801,6 +2968,18 @@ b.textContent='Скрипт страницы не выполнился: '+e.mess
         { opacity: 1, y: 0, duration: .34, ease: 'power2.out', stagger: .035, overwrite: true });
     }));
   }
+
+  /* ── 4b. ДОКУМЕНТЫ ──────────────────────────────────────────────────
+     Политика и правила. Без скрипта их открывает :target по ссылке
+     из подвала; со скриптом перехватываем переход, чтобы не трогать
+     адресную строку и не терять место на странице. */
+  $$('.doc').forEach(doc => {
+    $$('a[href="#' + doc.id + '"]').forEach(link =>
+      link.addEventListener('click', e => { e.preventDefault(); openDlg(doc); }));
+    $$('[data-doc-close]', doc).forEach(x =>
+      x.addEventListener('click', e => { e.preventDefault(); closeDlg(doc); }));
+    doc.addEventListener('click', e => { if (e.target === doc) closeDlg(doc); });
+  });
 
   /* ── 5. LIGHTBOX ────────────────────────────────────────────────────── */
   const lb = $('#lb');

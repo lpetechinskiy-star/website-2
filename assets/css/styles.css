@@ -1328,6 +1328,14 @@ dialog:not([open]):target {
 .book__body {
   overflow-y: auto; overscroll-behavior: contain;
   padding: var(--s5) var(--s5) calc(var(--s7) + env(safe-area-inset-bottom));
+  /* Прокручиваемая часть обрезала строки ровно по линии прогресса —
+     выглядело так, будто текст налезает на шапку. Теперь у краёв он
+     растворяется, а не обрубается. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--s4),
+                      #000 calc(100% - var(--s4)), transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 var(--s4),
+                      #000 calc(100% - var(--s4)), transparent 100%);
+  scroll-padding-block: var(--s4);
 }
 
 /* ── шаги ─────────────────────────────────────────────────────────────── */
@@ -1561,6 +1569,62 @@ dialog:not([open]):target {
 .ft__btm a, .form__alt a, .evs__note a, .done__note a { padding-block: .45rem }
 .ft__btm a { transition: color var(--d-base) var(--e-out) }
 .ft__btm a:hover { color: var(--brass) }
+
+/* ── документы: политика и правила ──────────────────────────────────────
+   Та же механика, что у меню: ссылка в подвале ведёт на #privacy или
+   #rules, и без скрипта окно разворачивает правило dialog:target. */
+.doc {
+  width: min(100%, 46rem); max-width: none;
+  max-height: 100dvh; height: 100dvh;
+  margin: 0 0 0 auto; padding: 0;
+  border: 0; border-inline-start: 1px solid var(--line-soft);
+  background: var(--ink); color: var(--bone);
+  overflow: hidden;
+}
+.doc::backdrop { background: rgba(6, 5, 4, .86); backdrop-filter: blur(7px) }
+.doc__in { display: grid; grid-template-rows: auto 1fr; height: 100dvh }
+.doc__hd {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s4);
+  padding: calc(var(--s5) + env(safe-area-inset-top)) var(--s5) var(--s4);
+  border-bottom: 1px solid var(--line-soft);
+}
+.doc__ttl { display: grid; gap: var(--s2) }
+.doc__hd h2 {
+  font: 600 clamp(1.5rem, 4vw, 2.1rem)/1.05 var(--f-disp);
+  text-transform: uppercase; letter-spacing: -.01em;
+}
+.doc__x {
+  display: grid; place-items: center;
+  width: 2.75rem; height: 2.75rem; flex: 0 0 auto;
+  border: 1px solid var(--ash); color: var(--bone);
+  transition: border-color var(--d-base) var(--e-out), color var(--d-base) var(--e-out);
+}
+.doc__x:hover { border-color: var(--brass); color: var(--brass) }
+.doc__body {
+  overflow-y: auto; overscroll-behavior: contain;
+  display: grid; gap: var(--s4);
+  padding: var(--s5) var(--s5) calc(var(--s8) + env(safe-area-inset-bottom));
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--s4),
+                      #000 calc(100% - var(--s4)), transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 var(--s4),
+                      #000 calc(100% - var(--s4)), transparent 100%);
+}
+.doc__body p { color: var(--mute); font-size: var(--t-sm); line-height: 1.7; max-width: 62ch }
+.doc__body .doc__lead { color: var(--bone); font-size: var(--t-lead) }
+.doc__body h3 {
+  margin-top: var(--s4);
+  font: 500 var(--t-xs)/1 var(--f-disp);
+  letter-spacing: .18em; text-transform: uppercase; color: var(--brass);
+}
+.doc__body ul { display: grid; gap: var(--s2); padding-inline-start: var(--s5); max-width: 62ch }
+.doc__body li { color: var(--mute); font-size: var(--t-sm); line-height: 1.6 }
+.doc__body li::marker { color: var(--faint) }
+.doc__body a { color: var(--brass); text-decoration: underline; text-underline-offset: 3px }
+.doc__body .doc__note {
+  margin-top: var(--s4); padding: var(--s4);
+  border: 1px solid var(--line-soft);
+  color: var(--faint); font-size: var(--t-xs); line-height: 1.6;
+}
 
 /* ── 19. STICKY MOBILE CTA ──────────────────────────────────────────────── */
 .cta-bar {
